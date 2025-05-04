@@ -13,6 +13,10 @@
     name="search_by"
     type="search"
     placeholder="Begin typing to search Systems..."
+    hx-get="/component/search_systems?page=0"
+    hx-trigger="keyup changed delay:250ms search"
+    hx-target="#search_results"
+    hx-swap="innerHTML"
   />
 
   <!-- Systems table -->
@@ -26,7 +30,7 @@
         <th>Team Name</th>
         <th>Team ID</th>
         <th>Lastest Dagrun</th>
-        <th>Numeber of Dagruns</th>
+        <th>Number of Dagruns</th>
       </tr>
     </thead>
     <tbody id="search_results">

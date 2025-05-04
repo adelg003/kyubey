@@ -6,9 +6,15 @@ mod page;
 
 use api::Api;
 use color_eyre::eyre;
-use poem::{EndpointExt, Route, Server, listener::TcpListener, middleware::Tracing};
+use poem::{EndpointExt, Route, Server, listener::TcpListener, middleware::Tracing, endpoint::EmbeddedFilesEndpoint};
 use poem_openapi::OpenApiService;
 use sqlx::PgPool;
+use rust_embed::Embed;
+
+/// Static files hosted via webserver
+#[derive(Embed)]
+#[folder = "assets"]
+struct Assets;
 
 #[tokio::main]
 async fn main() -> Result<(), eyre::Error> {
@@ -30,7 +36,7 @@ async fn main() -> Result<(), eyre::Error> {
     let app = Route::new()
         // Developer friendly locations
         .nest("/api", api_service)
-        //.nest("/assets", EmbeddedFilesEndpoint::<Assets>::new())
+        .nest("/assets", EmbeddedFilesEndpoint::<Assets>::new())
         .at("/spec", spec)
         .nest("/swagger", swagger)
         // User UI

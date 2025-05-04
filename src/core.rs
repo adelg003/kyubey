@@ -1,7 +1,7 @@
-use crate::db::search_systems_select;
+use crate::db::{search_systems_select, system_select};
 use askama::Template;
 use chrono::NaiveDateTime;
-use poem::error::InternalServerError;
+use poem::error::{InternalServerError, NotFound};
 use poem_openapi::Object;
 use sqlx::{Postgres, Transaction};
 
@@ -30,6 +30,21 @@ pub struct SearchSystems {
 
 /// How much do we want to paginate by
 const PAGE_SIZE: u32 = 50;
+
+/// Pull details for a single system
+pub async fn system_read(
+    tx: &mut Transaction<'_, Postgres>,
+    system_id: &str,
+) -> Result<System, poem::Error> {
+    // Pull details Systems
+    let system: System = match system_select(tx, system_id).await {
+        Ok(system) => Ok(system),
+        Err(sqlx::Error::RowNotFound) => Err(NotFound(sqlx::Error::RowNotFound)),
+        Err(err) => Err(InternalServerError(err)),
+    }?;
+
+    Ok(system)
+}
 
 /// Search for a System
 pub async fn search_systems_read(

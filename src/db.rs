@@ -14,6 +14,85 @@ struct SystemRow {
     number_of_dag_runs: Option<i64>,
 }
 
+impl SystemRow {
+    /// Convert a SystemRow into a System
+    fn into_system(self) -> Option<System> {
+        match self {
+            SystemRow {
+                client_name: Some(client_name),
+                client_id: Some(client_id),
+                system_name: Some(system_name),
+                system_id: Some(system_id),
+                team_name: Some(team_name),
+                team_id: Some(team_id),
+                latest_run: Some(latest_run),
+                number_of_dag_runs: Some(number_of_dag_runs),
+            } => Some(System {
+                client_name,
+                client_id,
+                system_name,
+                system_id,
+                team_name,
+                team_id,
+                latest_run,
+                number_of_dag_runs: u64::try_from(number_of_dag_runs).ok()?,
+            }),
+            _ => None,
+        }
+    }
+}
+
+/// Featch a single system
+pub async fn system_select(
+    tx: &mut Transaction<'_, Postgres>,
+    system_id: &str,
+) -> Result<System, sqlx::Error> {
+    // Pull all systems that meet our query
+    let row = query_as!(
+        SystemRow,
+        "SELECT
+            details ->> 'client_name' AS client_name,
+            details ->> 'client_id' AS client_id,
+            details ->> 'system_name' AS system_name,
+            details ->> 'system_id' AS system_id,
+            details ->> 'team_name' AS team_name,
+            details ->> 'team_id' AS team_id,
+            MAX(execution_date) AS latest_run,
+            COUNT(*) as number_of_dag_runs
+        FROM
+            api_trigger
+        WHERE
+            details ->> 'system_id' = $1
+        GROUP BY
+            details ->> 'client_name',
+            details ->> 'client_id',
+            details ->> 'system_name',
+            details ->> 'system_id',
+            details ->> 'team_name',
+            details ->> 'team_id'
+        HAVING
+            details ->> 'client_name' IS NOT NULL
+            AND details ->> 'client_id' IS NOT NULL
+            AND details ->> 'system_name' IS NOT NULL
+            AND details ->> 'system_id' IS NOT NULL
+            AND details ->> 'team_name' IS NOT NULL
+            AND details ->> 'team_id' IS NOT NULL
+        ",
+        system_id,
+    )
+    .fetch_one(&mut **tx)
+    .await?;
+
+    // Filter out partial system rows. Only full details allowed
+    let system: System = match row.into_system() {
+        Some(system) => Ok(system),
+        None => Err(sqlx::Error::RowNotFound),
+    }?;
+
+    Ok(system)
+}
+
+/// Search our database for systems
 pub async fn search_systems_select(
     tx: &mut Transaction<'_, Postgres>,
     search_by: &str,
@@ -68,61 +147,7 @@ pub async fn search_systems_select(
     // Filter out partial system rows. Only full details allowed
     let systems: Vec<System> = rows
         .into_iter()
-        .filter_map(|row: SystemRow| {
-            let client_name: String = match &row.client_name {
-                Some(client_name) => client_name.to_string(),
-                None => return None,
-            };
-
-            let client_id: String = match &row.client_id {
-                Some(client_id) => client_id.to_string(),
-                None => return None,
-            };
-
-            let system_name: String = match &row.system_name {
-                Some(system_name) => system_name.to_string(),
-                None => return None,
-            };
-
-            let system_id: String = match &row.system_id {
-                Some(system_id) => system_id.to_string(),
-                None => return None,
-            };
-
-            let team_name: String = match &row.team_name {
-                Some(team_name) => team_name.to_string(),
-                None => return None,
-            };
-
-            let team_id: String = match &row.team_id {
-                Some(team_id) => team_id.to_string(),
-                None => return None,
-            };
-
-            let latest_run: NaiveDateTime = match &row.latest_run {
-                Some(latest_run) => *latest_run,
-                None => return None,
-            };
-
-            let number_of_dag_runs: u64 = match &row.number_of_dag_runs {
-                Some(number_of_dag_runs) => match u64::try_from(*number_of_dag_runs) {
-                    Ok(number_of_dag_runs) => number_of_dag_runs,
-                    Err(_) => return None,
-                },
-                None => return None,
-            };
-
-            Some(System {
-                client_name,
-                client_id,
-                system_name,
-                system_id,
-                team_name,
-                team_id,
-                latest_run,
-                number_of_dag_runs,
-            })
-        })
+        .filter_map(|row: SystemRow| row.into_system())
         .collect();
 
     Ok(systems)
