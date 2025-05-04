@@ -1,52 +1,50 @@
-mod search;
-mod util;
+mod api;
+mod component;
+mod core;
+mod db;
+mod page;
 
+use api::Api;
 use color_eyre::eyre;
+use poem::{EndpointExt, Route, Server, listener::TcpListener, middleware::Tracing};
+use poem_openapi::OpenApiService;
 use sqlx::PgPool;
-use tokio::net::TcpListener;
-use tower_http::trace::TraceLayer;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use utoipa_axum::router::OpenApiRouter;
-use utoipa_swagger_ui::SwaggerUi;
-
-#[derive(Clone)]
-pub struct AppState {
-    pub pool: PgPool,
-}
 
 #[tokio::main]
 async fn main() -> Result<(), eyre::Error> {
     // Lets get pretty error reports
     color_eyre::install()?;
 
-    // Initialize tracing
-    tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    // Enable Poem's logging
+    tracing_subscriber::fmt::init();
+
+    // Setup our OpenAPI Service
+    let api_service = OpenApiService::new(Api, "Kyubey", "0.1.0").server("http://0.0.0.0:3000/api");
+    let spec = api_service.spec_endpoint();
+    let swagger = api_service.swagger_ui();
 
     // Connect to PostgreSQL
     let pool = PgPool::connect(&dotenvy::var("DATABASE_URL")?).await?;
-    let state = AppState { pool };
 
-    //Build top level Router
-    let (router, swagger) = OpenApiRouter::new()
-        // Add System endpoints
-        .merge(search::router())
-        
-        .with_state(state)
-        .split_for_parts();
+    // Route inbound traffic
+    let app = Route::new()
+        // Developer friendly locations
+        .nest("/api", api_service)
+        //.nest("/assets", EmbeddedFilesEndpoint::<Assets>::new())
+        .at("/spec", spec)
+        .nest("/swagger", swagger)
+        // User UI
+        .nest("/", page::route())
+        .nest("/component", component::route())
+        // Global context to be shared
+        .data(pool)
+        // Utilites being added to our services
+        .with(Tracing);
 
-    // Add Swagger page
-    let router = router
-        .merge(SwaggerUi::new("/swagger").url("/openapi.json", swagger))
-        // Add tracing to service
-        .layer(TraceLayer::new_for_http());
-
-    // Where should the webserver listen
-    let listener = TcpListener::bind("0.0.0.0:3000").await?;
-
-    // Host the rounts in out webserver
-    axum::serve(listener, router).await?;
+    // Lets run our service
+    Server::new(TcpListener::bind("0.0.0.0:3000"))
+        .run(app)
+        .await?;
 
     Ok(())
 }

@@ -1,0 +1,37 @@
+<!-- prettier-ignore -->
+{% extends "layout/base.html" %}
+
+{% block body %}
+<header>
+  <h1>Kyubey Search</h1>
+</header>
+
+<main>
+  <!-- Search for a System -->
+  <input
+    id="search_by_input"
+    name="search_by"
+    type="search"
+    placeholder="Begin typing to search Systems..."
+  />
+
+  <!-- Systems table -->
+  <table>
+    <thead>
+      <tr>
+        <th>Client Name</th>
+        <th>Client ID</th>
+        <th>System Name</th>
+        <th>System ID</th>
+        <th>Team Name</th>
+        <th>Team ID</th>
+        <th>Lastest Dagrun</th>
+        <th>Numeber of Dagruns</th>
+      </tr>
+    </thead>
+    <tbody id="search_results">
+      {{ systems|safe }}
+    </tbody>
+  </table>
+</main>
+{% endblock %}
