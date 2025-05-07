@@ -42,38 +42,38 @@
       <div>Number of Dagruns</div>
       <div>{{ system.number_of_dag_runs }}</div>
     </div>
-    <!-- Dag Run table -->
-    <table>
-      <thead>
-        <tr>
-          <th>Dag ID</th>
-          <th>Execution Date</th>
-          <th>State</th>
-          <th>Run ID</th>
-          <th>Start Date</th>
-          <th>End Date</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for dag_run in dag_runs %}
-        <tr id="row_{{ dag_run.run_id }}">
-          <td>{{ dag_run.dag_id }}</td>
-          <td>{{ dag_run.execution_date }}</td>
-          <td>{{ dag_run.state }}</td>
-          <td>{{ dag_run.run_id }}</td>
-          {% if let Some(start_date) = dag_run.start_date %}
-          <td>{{ start_date }}</td>
-          {% else %}
-          <td></td>
-          {% endif %}
-          {% if let Some(end_date) = dag_run.end_date %}
-          <td>{{ end_date }}</td>
-          {% else %}
-          <td></td>
-          {% endif %}
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  </div>
+  <!-- Dag Run table -->
+  <table>
+    <thead>
+      <tr>
+        <th>Dag ID</th>
+        <th>Execution Date</th>
+        <th>State</th>
+        <th>Run ID</th>
+        <th>Start Date</th>
+        <th>End Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for dag_run in dag_runs %}
+      <tr id="row_{{ dag_run.run_id }}">
+        <td>{{ dag_run.dag_id }}</td>
+        <td>{{ dag_run.execution_date }}</td>
+        <td>{{ dag_run.state }}</td>
+        <td>{{ dag_run.run_id }}</td>
+        {% if let Some(start_date) = dag_run.start_date %}
+        <td>{{ start_date }}</td>
+        {% else %}
+        <td></td>
+        {% endif %} {% if let Some(end_date) = dag_run.end_date %}
+        <td>{{ end_date }}</td>
+        {% else %}
+        <td></td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </main>
 {% endblock %}

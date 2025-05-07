@@ -2,7 +2,11 @@ use std::{fs, process::Command};
 
 fn main() {
     // Install Node Dependencies
-    let output = Command::new("sh").arg("-c").arg("npm clean-install").output().unwrap();
+    let output = Command::new("sh")
+        .arg("-c")
+        .arg("npm clean-install")
+        .output()
+        .unwrap();
 
     // Ensure Node Install worked
     if !output.status.success() {
