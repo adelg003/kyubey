@@ -1,6 +1,7 @@
-use crate::core::System;
-use chrono::NaiveDateTime;
+use crate::core::{DagRun, DagState, System};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use sqlx::{Postgres, Transaction, query_as};
+use std::str::FromStr;
 
 /// Results for a single system
 struct SystemRow {
@@ -36,6 +37,40 @@ impl SystemRow {
                 team_id,
                 latest_run,
                 number_of_dag_runs: u64::try_from(number_of_dag_runs).ok()?,
+            }),
+            _ => None,
+        }
+    }
+}
+
+/// A row of the Dag Run table
+struct DagRunRow {
+    dag_id: Option<String>,
+    execution_date: Option<NaiveDateTime>,
+    run_id: Option<String>,
+    state: Option<String>,
+    start_date: Option<DateTime<Utc>>,
+    end_date: Option<DateTime<Utc>>,
+}
+
+impl DagRunRow {
+    /// Convert a DagRunRow to a DagRun
+    fn into_dag_run(self) -> Option<DagRun> {
+        match self {
+            DagRunRow {
+                dag_id: Some(dag_id),
+                execution_date: Some(execution_date),
+                run_id: Some(run_id),
+                state: Some(state),
+                start_date,
+                end_date,
+            } => Some(DagRun {
+                dag_id,
+                execution_date,
+                run_id,
+                state: DagState::from_str(&state).ok()?,
+                start_date,
+                end_date,
             }),
             _ => None,
         }
@@ -130,6 +165,13 @@ pub async fn search_systems_select(
             details ->> 'system_id',
             details ->> 'team_name',
             details ->> 'team_id'
+        HAVING
+            details ->> 'client_name' IS NOT NULL
+            AND details ->> 'client_id' IS NOT NULL
+            AND details ->> 'system_name' IS NOT NULL
+            AND details ->> 'system_id' IS NOT NULL
+            AND details ->> 'team_name' IS NOT NULL
+            AND details ->> 'team_id' IS NOT NULL
         ORDER BY
             MAX(execution_date) DESC,
             details ->> 'system_id'
@@ -151,4 +193,49 @@ pub async fn search_systems_select(
         .collect();
 
     Ok(systems)
+}
+
+/// Pull all DAG Runs for a System
+pub async fn dag_runs_by_system_select(
+    tx: &mut Transaction<'_, Postgres>,
+    system_id: &str,
+) -> Result<Vec<DagRun>, sqlx::Error> {
+    //Pull all dag runs for a system
+    let rows = query_as!(
+        DagRunRow,
+        "SELECT
+            api_trigger.dag_id,
+            api_trigger.execution_date,
+            api_trigger.run_id,
+            dag_run.state,
+            dag_run.start_date,
+            dag_run.end_date
+        FROM
+            api_trigger
+        LEFT JOIN
+            dag_run
+        ON
+            dag_run.run_id = api_trigger.run_id
+        WHERE
+            api_trigger.details ->> 'system_id' = $1
+            AND api_trigger.details ->> 'client_name' IS NOT NULL
+            AND api_trigger.details ->> 'client_id' IS NOT NULL
+            AND api_trigger.details ->> 'system_name' IS NOT NULL
+            AND api_trigger.details ->> 'team_name' IS NOT NULL
+            AND api_trigger.details ->> 'team_id' IS NOT NULL
+       ORDER BY
+            api_trigger.execution_date,
+            api_trigger.dag_id",
+        system_id,
+    )
+    .fetch_all(&mut **tx)
+    .await?;
+
+    // Filter out partial dag run rows. Only full details allowed
+    let dag_runs: Vec<DagRun> = rows
+        .into_iter()
+        .filter_map(|row: DagRunRow| row.into_dag_run())
+        .collect();
+
+    Ok(dag_runs)
 }

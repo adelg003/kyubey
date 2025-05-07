@@ -9,7 +9,7 @@ use poem::{
 use serde::Deserialize;
 use sqlx::{PgPool, Postgres, Transaction};
 
-/// Router for all UI Components
+/// Router for all reactive UI Components
 pub fn route() -> Route {
     Route::new().at("/search_systems", get(search_systems_get))
 }

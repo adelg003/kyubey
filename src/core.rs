@@ -1,9 +1,10 @@
-use crate::db::{search_systems_select, system_select};
+use crate::db::{dag_runs_by_system_select, search_systems_select, system_select};
 use askama::Template;
-use chrono::NaiveDateTime;
+use chrono::{DateTime, NaiveDateTime, Utc};
 use poem::error::{InternalServerError, NotFound};
-use poem_openapi::Object;
+use poem_openapi::{Enum, Object};
 use sqlx::{Postgres, Transaction};
+use std::{fmt, str::FromStr};
 
 /// A single system
 #[derive(Object)]
@@ -20,7 +21,7 @@ pub struct System {
 
 /// Search for a system
 #[derive(Object, Template)]
-#[template(path = "component/search_systems.html")]
+#[template(path = "component/search_rows.html")]
 pub struct SearchSystems {
     systems: Vec<System>,
     search_by: String,
@@ -28,11 +29,67 @@ pub struct SearchSystems {
     next_page: Option<u32>,
 }
 
+/// All States a DAG can be in
+#[derive(Enum)]
+#[oai(rename_all = "lowercase")]
+pub enum DagState {
+    Failed,
+    Queued,
+    Running,
+    Success,
+}
+
+impl FromStr for DagState {
+    type Err = ();
+
+    /// Map a string to a DAG Run Status
+    fn from_str(text: &str) -> Result<Self, Self::Err> {
+        match text {
+            "failed" => Ok(Self::Failed),
+            "queued" => Ok(Self::Queued),
+            "runnning" => Ok(Self::Running),
+            "success" => Ok(Self::Success),
+            _ => Err(()),
+        }
+    }
+}
+
+impl fmt::Display for DagState {
+    /// How to formate the DagState for HTML rendering
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let text: &str = match self {
+            DagState::Failed => "failed",
+            DagState::Queued => "queued",
+            DagState::Running => "runnning",
+            DagState::Success => "success",
+        };
+        write!(formatter, "{}", text)
+    }
+}
+
+/// A single dag run
+#[derive(Object)]
+pub struct DagRun {
+    pub dag_id: String,
+    pub execution_date: NaiveDateTime,
+    pub run_id: String,
+    pub state: DagState,
+    pub start_date: Option<DateTime<Utc>>,
+    pub end_date: Option<DateTime<Utc>>,
+}
+
+/// All Dag Runs for a System
+#[derive(Object)]
+pub struct SystemDagRuns {
+    pub system: System,
+    pub dag_runs: Vec<DagRun>,
+}
+
 /// How much do we want to paginate by
 const PAGE_SIZE: u32 = 50;
 
 /// Pull details for a single system
-pub async fn system_read(
+async fn system_read(
     tx: &mut Transaction<'_, Postgres>,
     system_id: &str,
 ) -> Result<System, poem::Error> {
@@ -77,4 +134,20 @@ pub async fn search_systems_read(
         page: *page,
         next_page,
     })
+}
+
+/// Dag Runs by System
+pub async fn dag_runs_by_system_read(
+    tx: &mut Transaction<'_, Postgres>,
+    system_id: &str,
+) -> Result<SystemDagRuns, poem::Error> {
+    // Pull the Systems
+    let system: System = system_read(tx, system_id).await?;
+
+    // Pull dag runs for that system
+    let dag_runs: Vec<DagRun> = dag_runs_by_system_select(tx, system_id)
+        .await
+        .map_err(InternalServerError)?;
+
+    Ok(SystemDagRuns { system, dag_runs })
 }

@@ -1,0 +1,79 @@
+<!-- prettier-ignore -->
+{% extends "layout/base.html" %}
+
+{% block body %}
+<header>
+  {% include "component/navbar.html" %}
+  <h1>Dag Runs</h1>
+</header>
+
+<main>
+  <!-- System Details -->
+  <div>
+    <div>
+      <div>Client Name</div>
+      <div>{{ system.client_name }}</div>
+    </div>
+    <div>
+      <div>Client ID</div>
+      <div>{{ system.client_id }}</div>
+    </div>
+    <div>
+      <div>System Name</div>
+      <div>{{ system.system_name }}</div>
+    </div>
+    <div>
+      <div>System ID</div>
+      <div>{{ system.system_id }}</div>
+    </div>
+    <div>
+      <div>Team Name</div>
+      <div>{{ system.team_name }}</div>
+    </div>
+    <div>
+      <div>Team ID</div>
+      <div>{{ system.team_id }}</div>
+    </div>
+    <div>
+      <div>Lastest Dagrun</div>
+      <div>{{ system.latest_run }}</div>
+    </div>
+    <div>
+      <div>Number of Dagruns</div>
+      <div>{{ system.number_of_dag_runs }}</div>
+    </div>
+    <!-- Dag Run table -->
+    <table>
+      <thead>
+        <tr>
+          <th>Dag ID</th>
+          <th>Execution Date</th>
+          <th>State</th>
+          <th>Run ID</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for dag_run in dag_runs %}
+        <tr id="row_{{ dag_run.run_id }}">
+          <td>{{ dag_run.dag_id }}</td>
+          <td>{{ dag_run.execution_date }}</td>
+          <td>{{ dag_run.state }}</td>
+          <td>{{ dag_run.run_id }}</td>
+          {% if let Some(start_date) = dag_run.start_date %}
+          <td>{{ start_date }}</td>
+          {% else %}
+          <td></td>
+          {% endif %}
+          {% if let Some(end_date) = dag_run.end_date %}
+          <td>{{ end_date }}</td>
+          {% else %}
+          <td></td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</main>
+{% endblock %}

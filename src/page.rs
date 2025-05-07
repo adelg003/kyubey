@@ -1,16 +1,27 @@
-use crate::core::{SearchSystems, search_systems_read};
+use crate::core::{
+    DagRun, SearchSystems, System, SystemDagRuns, dag_runs_by_system_read, search_systems_read,
+};
 use askama::Template;
 use poem::{
     Route,
     error::InternalServerError,
     get, handler,
-    web::{Data, Html},
+    web::{Data, Html, Path},
 };
 use sqlx::{PgPool, Postgres, Transaction};
 
 /// Router for all UI Pages
 pub fn route() -> Route {
-    Route::new().at("/", get(index))
+    Route::new()
+        .at("/", get(index))
+        .at("/dag_runs/:sysetem_id", get(dag_runs))
+}
+
+/// Navbar for all pages
+struct NavBar {
+    system_id: Option<String>,
+    run_id: Option<String>,
+    task_id: Option<String>,
 }
 
 /// Search for a system
@@ -18,6 +29,7 @@ pub fn route() -> Route {
 #[template(path = "page/index.html")]
 struct Index {
     systems: SearchSystems,
+    navbar: NavBar,
 }
 
 /// Webpage to search for your system
@@ -30,7 +42,53 @@ async fn index(Data(pool): Data<&PgPool>) -> Result<Html<String>, poem::Error> {
     let systems: SearchSystems = search_systems_read(&mut tx, "", &0).await?;
 
     // Render the Index Page
-    let index: String = Index { systems }.render().map_err(InternalServerError)?;
+    let index: String = Index {
+        systems,
+        navbar: NavBar {
+            system_id: None,
+            run_id: None,
+            task_id: None,
+        },
+    }
+    .render()
+    .map_err(InternalServerError)?;
 
     Ok(Html(index))
+}
+
+/// All Dag Runs for a System
+#[derive(Template)]
+#[template(path = "page/dag_runs.html")]
+struct SystemDagRunPage {
+    system: System,
+    dag_runs: Vec<DagRun>,
+    navbar: NavBar,
+}
+
+/// Webpage to view dag runs for a system
+#[handler]
+async fn dag_runs(
+    Data(pool): Data<&PgPool>,
+    Path(system_id): Path<String>,
+) -> Result<Html<String>, poem::Error> {
+    // Start Transaction
+    let mut tx: Transaction<'_, Postgres> = pool.begin().await.map_err(InternalServerError)?;
+
+    // Search for anything that meets our criteria
+    let dag_runs: SystemDagRuns = dag_runs_by_system_read(&mut tx, &system_id).await?;
+
+    // Render Dag Run page
+    let dag_run_page: String = SystemDagRunPage {
+        system: dag_runs.system,
+        dag_runs: dag_runs.dag_runs,
+        navbar: NavBar {
+            system_id: Some(system_id),
+            run_id: None,
+            task_id: None,
+        },
+    }
+    .render()
+    .map_err(InternalServerError)?;
+
+    Ok(Html(dag_run_page))
 }
