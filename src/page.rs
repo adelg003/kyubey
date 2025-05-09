@@ -1,5 +1,6 @@
 use crate::core::{
-    DagRun, SearchSystems, System, SystemDagRuns, dag_runs_by_system_read, search_systems_read,
+    DagRun, DagRunTasks, SearchSystems, System, SystemDagRuns, Task, dag_runs_for_system_read,
+    search_systems_read, tasks_for_dag_run_read,
 };
 use askama::Template;
 use poem::{
@@ -15,6 +16,7 @@ pub fn route() -> Route {
     Route::new()
         .at("/", get(index))
         .at("/dag_runs/:sysetem_id", get(dag_runs))
+        .at("/tasks/:run_id", get(tasks))
 }
 
 /// Navbar for all pages
@@ -75,7 +77,7 @@ async fn dag_runs(
     let mut tx: Transaction<'_, Postgres> = pool.begin().await.map_err(InternalServerError)?;
 
     // Search for anything that meets our criteria
-    let dag_runs: SystemDagRuns = dag_runs_by_system_read(&mut tx, &system_id).await?;
+    let dag_runs: SystemDagRuns = dag_runs_for_system_read(&mut tx, &system_id).await?;
 
     // Render Dag Run page
     let dag_run_page: String = SystemDagRunPage {
@@ -91,4 +93,41 @@ async fn dag_runs(
     .map_err(InternalServerError)?;
 
     Ok(Html(dag_run_page))
+}
+
+/// All Task for a Dag Run
+#[derive(Template)]
+#[template(path = "page/tasks.html")]
+struct DagRunTaskPage {
+    dag_run: DagRun,
+    tasks: Vec<Task>,
+    navbar: NavBar,
+}
+
+/// Webpage to view Tasks for a Dag Run
+#[handler]
+async fn tasks(
+    Data(pool): Data<&PgPool>,
+    Path(run_id): Path<String>,
+) -> Result<Html<String>, poem::Error> {
+    // Start Transaction
+    let mut tx: Transaction<'_, Postgres> = pool.begin().await.map_err(InternalServerError)?;
+
+    // Search for anything that meets our criteria
+    let tasks: DagRunTasks = tasks_for_dag_run_read(&mut tx, &run_id).await?;
+
+    // Render Tasks page
+    let task_page: String = DagRunTaskPage {
+        dag_run: tasks.dag_run,
+        tasks: tasks.tasks,
+        navbar: NavBar {
+            system_id: Some(tasks.system.system_id),
+            run_id: Some(run_id),
+            task_id: None,
+        },
+    }
+    .render()
+    .map_err(InternalServerError)?;
+
+    Ok(Html(task_page))
 }

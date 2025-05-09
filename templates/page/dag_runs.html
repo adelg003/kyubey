@@ -53,6 +53,7 @@
         <th>Run ID</th>
         <th>Start Date</th>
         <th>End Date</th>
+        <th>Tasks</th>
       </tr>
     </thead>
     <tbody>
@@ -60,7 +61,11 @@
       <tr id="row_{{ dag_run.run_id }}">
         <td>{{ dag_run.dag_id }}</td>
         <td>{{ dag_run.execution_date }}</td>
-        <td>{{ dag_run.state }}</td>
+        {% if let Some(state) = dag_run.state %}
+        <td>{{ state }}</td>
+        {% else %}
+        <td></td>
+        {% endif %}
         <td>{{ dag_run.run_id }}</td>
         {% if let Some(start_date) = dag_run.start_date %}
         <td>{{ start_date }}</td>
@@ -71,6 +76,7 @@
         {% else %}
         <td></td>
         {% endif %}
+        <td><a href="/tasks/{{ dag_run.run_id }}">Dag Runs</a></td>
       </tr>
       {% endfor %}
     </tbody>

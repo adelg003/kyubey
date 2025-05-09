@@ -1,6 +1,9 @@
-use crate::db::{dag_runs_by_system_select, search_systems_select, system_select};
+use crate::db::{
+    dag_run_select, dag_runs_by_system_select, search_systems_select, system_for_dag_run_select,
+    system_select, tasks_for_dag_run_select,
+};
 use askama::Template;
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use poem::error::{InternalServerError, NotFound};
 use poem_openapi::{Enum, Object};
 use sqlx::{Postgres, Transaction};
@@ -15,7 +18,7 @@ pub struct System {
     pub system_id: String,
     pub team_name: String,
     pub team_id: String,
-    pub latest_run: NaiveDateTime,
+    pub latest_run: DateTime<Utc>,
     pub number_of_dag_runs: u64,
 }
 
@@ -42,7 +45,7 @@ pub enum DagState {
 impl FromStr for DagState {
     type Err = ();
 
-    /// Map a string to a DAG Run Status
+    /// Map a string to a DAG Run Status, string come from Airflow DB
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         match text {
             "failed" => Ok(Self::Failed),
@@ -71,9 +74,9 @@ impl fmt::Display for DagState {
 #[derive(Object)]
 pub struct DagRun {
     pub dag_id: String,
-    pub execution_date: NaiveDateTime,
+    pub execution_date: DateTime<Utc>,
     pub run_id: String,
-    pub state: DagState,
+    pub state: Option<DagState>,
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
 }
@@ -83,6 +86,86 @@ pub struct DagRun {
 pub struct SystemDagRuns {
     pub system: System,
     pub dag_runs: Vec<DagRun>,
+}
+
+/// The states an Airflow Task can be in
+#[derive(Enum)]
+#[oai(rename_all = "lowercase")]
+pub enum TaskState {
+    Deferred,
+    Failed,
+    Queued,
+    Removed,
+    Restarting,
+    Running,
+    Scheduled,
+    Skipped,
+    Success,
+    UpForReschedule,
+    UpForRetry,
+    UpstreamFailed,
+}
+
+impl FromStr for TaskState {
+    type Err = ();
+
+    /// Map a string to a Task Status, string come from Airflow DB
+    fn from_str(text: &str) -> Result<Self, Self::Err> {
+        match text {
+            "deferred" => Ok(Self::Deferred),
+            "failed" => Ok(Self::Failed),
+            "queued" => Ok(Self::Queued),
+            "removed" => Ok(Self::Removed),
+            "restarting" => Ok(Self::Restarting),
+            "running" => Ok(Self::Running),
+            "scheduled" => Ok(Self::Scheduled),
+            "skipped" => Ok(Self::Skipped),
+            "success" => Ok(Self::Success),
+            "up_for_reschedule" => Ok(Self::UpForReschedule),
+            "up_for_retry" => Ok(Self::UpForRetry),
+            "upstream_failed" => Ok(Self::UpstreamFailed),
+            _ => Err(()),
+        }
+    }
+}
+
+impl fmt::Display for TaskState {
+    /// How to formate the DagState for HTML rendering
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let text: &str = match self {
+            TaskState::Deferred => "deferred",
+            TaskState::Failed => "failed",
+            TaskState::Queued => "queued",
+            TaskState::Removed => "removed",
+            TaskState::Restarting => "restarting",
+            TaskState::Running => "running",
+            TaskState::Scheduled => "scheduled",
+            TaskState::Skipped => "skipped",
+            TaskState::Success => "success",
+            TaskState::UpForReschedule => "up_for_reschedule",
+            TaskState::UpForRetry => "up_for_retry",
+            TaskState::UpstreamFailed => "upstream_failed",
+        };
+        write!(formatter, "{}", text)
+    }
+}
+
+/// A single Task. Task make up a Dag Run.
+#[derive(Object)]
+pub struct Task {
+    pub task_id: String,
+    pub state: Option<TaskState>,
+    pub start_date: Option<DateTime<Utc>>,
+    pub end_date: Option<DateTime<Utc>>,
+    pub try_number: u32,
+}
+
+/// All Task for a Dag Run
+#[derive(Object)]
+pub struct DagRunTasks {
+    pub system: System,
+    pub dag_run: DagRun,
+    pub tasks: Vec<Task>,
 }
 
 /// How much do we want to paginate by
@@ -95,6 +178,21 @@ async fn system_read(
 ) -> Result<System, poem::Error> {
     // Pull details Systems
     let system: System = match system_select(tx, system_id).await {
+        Ok(system) => Ok(system),
+        Err(sqlx::Error::RowNotFound) => Err(NotFound(sqlx::Error::RowNotFound)),
+        Err(err) => Err(InternalServerError(err)),
+    }?;
+
+    Ok(system)
+}
+
+/// Pull details for System based off Run ID
+async fn system_for_dag_run_read(
+    tx: &mut Transaction<'_, Postgres>,
+    run_id: &str,
+) -> Result<System, poem::Error> {
+    // Pull details for a dag run
+    let system: System = match system_for_dag_run_select(tx, run_id).await {
         Ok(system) => Ok(system),
         Err(sqlx::Error::RowNotFound) => Err(NotFound(sqlx::Error::RowNotFound)),
         Err(err) => Err(InternalServerError(err)),
@@ -136,8 +234,23 @@ pub async fn search_systems_read(
     })
 }
 
+/// Pull details for a dag run
+async fn dag_run_read(
+    tx: &mut Transaction<'_, Postgres>,
+    run_id: &str,
+) -> Result<DagRun, poem::Error> {
+    // Pull details for a dag run
+    let dag_run: DagRun = match dag_run_select(tx, run_id).await {
+        Ok(dag_run) => Ok(dag_run),
+        Err(sqlx::Error::RowNotFound) => Err(NotFound(sqlx::Error::RowNotFound)),
+        Err(err) => Err(InternalServerError(err)),
+    }?;
+
+    Ok(dag_run)
+}
+
 /// Dag Runs by System
-pub async fn dag_runs_by_system_read(
+pub async fn dag_runs_for_system_read(
     tx: &mut Transaction<'_, Postgres>,
     system_id: &str,
 ) -> Result<SystemDagRuns, poem::Error> {
@@ -150,4 +263,27 @@ pub async fn dag_runs_by_system_read(
         .map_err(InternalServerError)?;
 
     Ok(SystemDagRuns { system, dag_runs })
+}
+
+/// Tasks by Run ID
+pub async fn tasks_for_dag_run_read(
+    tx: &mut Transaction<'_, Postgres>,
+    run_id: &str,
+) -> Result<DagRunTasks, poem::Error> {
+    // Pull the DAG Run
+    let dag_run: DagRun = dag_run_read(tx, run_id).await?;
+
+    // Pull the System details by Run ID
+    let system: System = system_for_dag_run_read(tx, run_id).await?;
+
+    // Pull all Tasks for a Dag Run
+    let tasks: Vec<Task> = tasks_for_dag_run_select(tx, run_id)
+        .await
+        .map_err(InternalServerError)?;
+
+    Ok(DagRunTasks {
+        system,
+        dag_run,
+        tasks,
+    })
 }

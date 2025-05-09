@@ -1,4 +1,7 @@
-use crate::core::{SearchSystems, SystemDagRuns, dag_runs_by_system_read, search_systems_read};
+use crate::core::{
+    DagRunTasks, SearchSystems, SystemDagRuns, dag_runs_for_system_read, search_systems_read,
+    tasks_for_dag_run_read,
+};
 use poem::{error::InternalServerError, web::Data};
 use poem_openapi::{
     OpenApi, Tags,
@@ -13,7 +16,7 @@ enum Tag {
     DagRun,
     Log,
     System,
-    TaskInstance,
+    Task,
 }
 
 /// Struct we will use to build our REST API
@@ -40,7 +43,7 @@ impl Api {
 
     /// Provide dag run and system details
     #[oai(path = "/dag_runs/:system_id", method = "get", tag = Tag::DagRun)]
-    async fn dag_runs_by_system_get(
+    async fn dag_runs_for_system_get(
         &self,
         Data(pool): Data<&PgPool>,
         Path(system_id): Path<String>,
@@ -49,8 +52,24 @@ impl Api {
         let mut tx: Transaction<'_, Postgres> = pool.begin().await.map_err(InternalServerError)?;
 
         // Search for anything that meets our criteria
-        let dag_runs: SystemDagRuns = dag_runs_by_system_read(&mut tx, &system_id).await?;
+        let dag_runs: SystemDagRuns = dag_runs_for_system_read(&mut tx, &system_id).await?;
 
         Ok(Json(dag_runs))
+    }
+
+    /// Provide Tasks that make up a Dag Run
+    #[oai(path = "/tasks/:run_id", method = "get", tag = Tag::Task)]
+    async fn tasks_for_dag_run_get(
+        &self,
+        Data(pool): Data<&PgPool>,
+        Path(run_id): Path<String>,
+    ) -> Result<Json<DagRunTasks>, poem::Error> {
+        // Start Transaction
+        let mut tx: Transaction<'_, Postgres> = pool.begin().await.map_err(InternalServerError)?;
+
+        // Search for anything that meets our criteria
+        let tasks: DagRunTasks = tasks_for_dag_run_read(&mut tx, &run_id).await?;
+
+        Ok(Json(tasks))
     }
 }

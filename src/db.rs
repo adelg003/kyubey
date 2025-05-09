@@ -1,5 +1,5 @@
-use crate::core::{DagRun, DagState, System};
-use chrono::{DateTime, NaiveDateTime, Utc};
+use crate::core::{DagRun, DagState, System, Task, TaskState};
+use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use sqlx::{Postgres, Transaction, query_as};
 use std::str::FromStr;
 
@@ -35,7 +35,7 @@ impl SystemRow {
                 system_id,
                 team_name,
                 team_id,
-                latest_run,
+                latest_run: Utc.from_utc_datetime(&latest_run),
                 number_of_dag_runs: u64::try_from(number_of_dag_runs).ok()?,
             }),
             _ => None,
@@ -45,9 +45,9 @@ impl SystemRow {
 
 /// A row of the Dag Run table
 struct DagRunRow {
-    dag_id: Option<String>,
-    execution_date: Option<NaiveDateTime>,
-    run_id: Option<String>,
+    dag_id: String,
+    execution_date: DateTime<Utc>,
+    run_id: String,
     state: Option<String>,
     start_date: Option<DateTime<Utc>>,
     end_date: Option<DateTime<Utc>>,
@@ -55,22 +55,48 @@ struct DagRunRow {
 
 impl DagRunRow {
     /// Convert a DagRunRow to a DagRun
-    fn into_dag_run(self) -> Option<DagRun> {
+    fn into_dag_run(self) -> DagRun {
+        let state: Option<DagState> = match self.state {
+            Some(text) => DagState::from_str(&text).ok(),
+            None => None,
+        };
+
+        DagRun {
+            dag_id: self.dag_id,
+            execution_date: self.execution_date,
+            run_id: self.run_id,
+            state,
+            start_date: self.start_date,
+            end_date: self.end_date,
+        }
+    }
+}
+
+/// A row of the Task table
+struct TaskRow {
+    task_id: String,
+    state: Option<String>,
+    start_date: Option<DateTime<Utc>>,
+    end_date: Option<DateTime<Utc>>,
+    try_number: Option<i32>,
+}
+
+impl TaskRow {
+    /// Convert a TaskRow to a Task
+    fn into_task(self) -> Option<Task> {
         match self {
-            DagRunRow {
-                dag_id: Some(dag_id),
-                execution_date: Some(execution_date),
-                run_id: Some(run_id),
-                state: Some(state),
+            TaskRow {
+                task_id,
+                state,
                 start_date,
                 end_date,
-            } => Some(DagRun {
-                dag_id,
-                execution_date,
-                run_id,
-                state: DagState::from_str(&state).ok()?,
+                try_number: Some(try_number),
+            } => Some(Task {
+                task_id,
+                state: TaskState::from_str(&state?).ok(),
                 start_date,
                 end_date,
+                try_number: u32::try_from(try_number).ok()?,
             }),
             _ => None,
         }
@@ -82,7 +108,7 @@ pub async fn system_select(
     tx: &mut Transaction<'_, Postgres>,
     system_id: &str,
 ) -> Result<System, sqlx::Error> {
-    // Pull all systems that meet our query
+    // Pull a system that meet our query
     let row = query_as!(
         SystemRow,
         "SELECT
@@ -114,6 +140,64 @@ pub async fn system_select(
             AND details ->> 'team_id' IS NOT NULL
         ",
         system_id,
+    )
+    .fetch_one(&mut **tx)
+    .await?;
+
+    // Filter out partial system rows. Only full details allowed
+    let system: System = match row.into_system() {
+        Some(system) => Ok(system),
+        None => Err(sqlx::Error::RowNotFound),
+    }?;
+
+    Ok(system)
+}
+
+/// Featch the system for a Dag Run
+pub async fn system_for_dag_run_select(
+    tx: &mut Transaction<'_, Postgres>,
+    run_id: &str,
+) -> Result<System, sqlx::Error> {
+    // Pull a system for a dag run
+    let row = query_as!(
+        SystemRow,
+        "SELECT
+            a.details ->> 'client_name' AS client_name,
+            a.details ->> 'client_id' AS client_id,
+            a.details ->> 'system_name' AS system_name,
+            a.details ->> 'system_id' AS system_id,
+            a.details ->> 'team_name' AS team_name,
+            a.details ->> 'team_id' AS team_id,
+            MAX(a.execution_date) AS latest_run,
+            COUNT(a.*) as number_of_dag_runs
+        FROM
+            api_trigger a
+        WHERE
+            EXISTS(
+                SELECT
+                    *
+                FROM
+                    api_trigger b
+                WHERE
+                    b.details ->> 'system_id' = a.details ->> 'system_id'
+                    AND b.run_id = $1
+            )
+        GROUP BY
+            a.details ->> 'client_name',
+            a.details ->> 'client_id',
+            a.details ->> 'system_name',
+            a.details ->> 'system_id',
+            a.details ->> 'team_name',
+            a.details ->> 'team_id'
+        HAVING
+            a.details ->> 'client_name' IS NOT NULL
+            AND a.details ->> 'client_id' IS NOT NULL
+            AND a.details ->> 'system_name' IS NOT NULL
+            AND a.details ->> 'system_id' IS NOT NULL
+            AND a.details ->> 'team_name' IS NOT NULL
+            AND a.details ->> 'team_id' IS NOT NULL
+        ",
+        run_id,
     )
     .fetch_one(&mut **tx)
     .await?;
@@ -204,16 +288,16 @@ pub async fn dag_runs_by_system_select(
     let rows = query_as!(
         DagRunRow,
         "SELECT
-            api_trigger.dag_id,
-            api_trigger.execution_date,
-            api_trigger.run_id,
+            dag_run.dag_id,
+            dag_run.execution_date,
+            dag_run.run_id,
             dag_run.state,
             dag_run.start_date,
             dag_run.end_date
         FROM
-            api_trigger
-        LEFT JOIN
             dag_run
+        INNER JOIN
+            api_trigger
         ON
             dag_run.run_id = api_trigger.run_id
         WHERE
@@ -224,8 +308,8 @@ pub async fn dag_runs_by_system_select(
             AND api_trigger.details ->> 'team_name' IS NOT NULL
             AND api_trigger.details ->> 'team_id' IS NOT NULL
        ORDER BY
-            api_trigger.execution_date,
-            api_trigger.dag_id",
+            dag_run.execution_date,
+            dag_run.dag_id",
         system_id,
     )
     .fetch_all(&mut **tx)
@@ -234,8 +318,75 @@ pub async fn dag_runs_by_system_select(
     // Filter out partial dag run rows. Only full details allowed
     let dag_runs: Vec<DagRun> = rows
         .into_iter()
-        .filter_map(|row: DagRunRow| row.into_dag_run())
+        .map(|row: DagRunRow| row.into_dag_run())
         .collect();
 
     Ok(dag_runs)
+}
+
+/// Featch a single Dag Run
+pub async fn dag_run_select(
+    tx: &mut Transaction<'_, Postgres>,
+    run_id: &str,
+) -> Result<DagRun, sqlx::Error> {
+    // Pull a Dag Run that meets our query
+    let row = query_as!(
+        DagRunRow,
+        "SELECT
+            dag_id,
+            execution_date,
+            run_id,
+            state,
+            start_date,
+            end_date
+        FROM
+            dag_run
+        WHERE
+            run_id = $1
+        ",
+        run_id,
+    )
+    .fetch_one(&mut **tx)
+    .await?;
+
+    // Filter out partial system rows. Only full details allowed
+    let dag_run: DagRun = row.into_dag_run();
+
+    Ok(dag_run)
+}
+
+/// Pull all Tasks for a Run ID
+pub async fn tasks_for_dag_run_select(
+    tx: &mut Transaction<'_, Postgres>,
+    run_id: &str,
+) -> Result<Vec<Task>, sqlx::Error> {
+    // Pull all tasks for a dag run
+    let rows = query_as!(
+        TaskRow,
+        "SELECT
+            task_id,
+            state,
+            start_date,
+            end_date,
+            try_number
+        FROM
+            task_instance
+        WHERE
+            run_id = $1
+        ORDER BY
+            dag_id,
+            priority_weight,
+            task_id",
+        run_id,
+    )
+    .fetch_all(&mut **tx)
+    .await?;
+
+    // Filter out partial dag run rows. Only full details allowed
+    let tasks: Vec<Task> = rows
+        .into_iter()
+        .filter_map(|row: TaskRow| row.into_task())
+        .collect();
+
+    Ok(tasks)
 }
