@@ -14,6 +14,13 @@ use poem_openapi::OpenApiService;
 use rust_embed::Embed;
 use sqlx::PgPool;
 
+/// Struct to put our Configs into
+#[derive(Clone)]
+struct Config {
+    database_url: String,
+    log_path: String,
+}
+
 /// Static files hosted via webserver
 #[derive(Embed)]
 #[folder = "assets"]
@@ -27,13 +34,19 @@ async fn main() -> Result<(), eyre::Error> {
     // Enable Poem's logging
     tracing_subscriber::fmt::init();
 
+    // Generate our configs to share between threads
+    let config = Config {
+        database_url: dotenvy::var("DATABASE_URL")?,
+        log_path: dotenvy::var("LOG_PATH")?,
+    };
+
     // Setup our OpenAPI Service
     let api_service = OpenApiService::new(Api, "Kyubey", "0.1.0").server("http://0.0.0.0:3000/api");
     let spec = api_service.spec_endpoint();
     let swagger = api_service.swagger_ui();
 
     // Connect to PostgreSQL
-    let pool = PgPool::connect(&dotenvy::var("DATABASE_URL")?).await?;
+    let pool = PgPool::connect(&config.database_url).await?;
 
     // Route inbound traffic
     let app = Route::new()
@@ -46,6 +59,7 @@ async fn main() -> Result<(), eyre::Error> {
         .nest("/", page::route())
         .nest("/component", component::route())
         // Global context to be shared
+        .data(config)
         .data(pool)
         // Utilites being added to our services
         .with(Tracing);

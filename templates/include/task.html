@@ -1,0 +1,39 @@
+<!-- Task Details -->
+<div>
+  <div>
+    <div>Task ID</div>
+    <div>{{ task.task_id }}</div>
+  </div>
+  <div>
+    <div>State</div>
+    {% if let Some(state) = task.state %}
+    <div>{{ state }}</div>
+    {% else %}
+    <div></div>
+    {% endif %}
+  </div>
+  <div>
+    <div>Start Date</div>
+    {% if let Some(start_date) = task.start_date %}
+    <div>{{ start_date }}</div>
+    {% else %}
+    <div></div>
+    {% endif %}
+  </div>
+  <div>
+    <div>End Date</div>
+    {% if let Some(end_date) = task.end_date %}
+    <div>{{ end_date }}</div>
+    {% else %}
+    <div></div>
+    {% endif %}
+  </div>
+  <div>
+    <div>Attepts</div>
+    {% if let Some(try_number) = task.try_number %}
+    <div>{{ try_number }}</div>
+    {% else %}
+    <div></div>
+    {% endif %}
+  </div>
+</div>

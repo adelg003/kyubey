@@ -3,52 +3,14 @@
 
 {% block body %}
 <header>
-  {% include "component/navbar.html" %}
+  {% include "include/navbar.html" %}
   <h1>Tasks</h1>
 </header>
 
 <main>
-  <!-- Dag Run Details -->
-  <div>
-    <div>
-      <div>DAG ID</div>
-      <div>{{ dag_run.dag_id }}</div>
-    </div>
-    <div>
-      <div>Execution Date</div>
-      <div>{{ dag_run.execution_date }}</div>
-    </div>
-    <div>
-      <div>Run ID</div>
-      <div>{{ dag_run.run_id }}</div>
-    </div>
-    <div>
-      <div>State</div>
-      {% if let Some(state) = dag_run.state %}
-      <div>{{ state }}</div>
-      {% else %}
-      <div></div>
-      {% endif %}
-    </div>
-    <div>
-      <div>Start Date</div>
-      {% if let Some(start_date) = dag_run.start_date %}
-      <div>{{ start_date }}</div>
-      {% else %}
-      <div></div>
-      {% endif %}
-    </div>
-    <div>
-      <div>End Date</div>
-      {% if let Some(end_date) = dag_run.end_date %}
-      <div>{{ end_date }}</div>
-      {% else %}
-      <div></div>
-      {% endif %}
-    </div>
-  </div>
+  {% include "include/system.html" %} {% include "include/dag_run.html" %}
 
-  <!-- Dag Run table -->
+  <!-- Task table -->
   <table>
     <thead>
       <tr>
@@ -56,7 +18,8 @@
         <th>State</th>
         <th>Start Date</th>
         <th>End Date</th>
-        <th>Reties</th>
+        <th>Attempts</th>
+        <th>Logs</th>
       </tr>
     </thead>
     <tbody>
@@ -68,16 +31,24 @@
         {% else %}
         <td></td>
         {% endif %}
+        <!-- prettier-ignore -->
         {% if let Some(start_date) = task.start_date %}
         <td>{{ start_date }}</td>
         {% else %}
         <td></td>
-        {% endif %} {% if let Some(end_date) = task.end_date %}
+        {% endif %}
+        <!-- prettier-ignore -->
+        {% if let Some(end_date) = task.end_date %}
         <td>{{ end_date }}</td>
         {% else %}
         <td></td>
         {% endif %}
-        <td>{{ task.try_number }}</td>
+        <!-- prettier-ignore -->
+        {% if let Some(try_number) = task.try_number %}
+        {% if *try_number > 0 %}
+        <td>{{ try_number }}</td>
+        <td><a href="/logs/{{ task.run_id }}/{{ task.task_id }}">Logs</a></td>
+        {% endif %} {% endif %}
       </tr>
       {% endfor %}
     </tbody>

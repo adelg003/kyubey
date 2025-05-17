@@ -1,13 +1,16 @@
-use crate::db::{
-    dag_run_select, dag_runs_by_system_select, search_systems_select, system_for_dag_run_select,
-    system_select, tasks_for_dag_run_select,
+use crate::{
+    Config,
+    db::{
+        dag_run_select, dag_runs_by_system_select, search_systems_select,
+        system_for_dag_run_select, system_select, task_select, tasks_for_dag_run_select,
+    },
 };
-use askama::Template;
 use chrono::{DateTime, Utc};
 use poem::error::{InternalServerError, NotFound};
 use poem_openapi::{Enum, Object};
 use sqlx::{Postgres, Transaction};
-use std::{fmt, str::FromStr};
+use std::{fmt, io::ErrorKind, path::PathBuf, str::FromStr};
+use tokio::fs;
 
 /// A single system
 #[derive(Object)]
@@ -20,16 +23,6 @@ pub struct System {
     pub team_id: String,
     pub latest_run: DateTime<Utc>,
     pub number_of_dag_runs: u64,
-}
-
-/// Search for a system
-#[derive(Object, Template)]
-#[template(path = "component/search_rows.html")]
-pub struct SearchSystems {
-    systems: Vec<System>,
-    search_by: String,
-    page: u32,
-    next_page: Option<u32>,
 }
 
 /// All States a DAG can be in
@@ -76,6 +69,7 @@ pub struct DagRun {
     pub dag_id: String,
     pub execution_date: DateTime<Utc>,
     pub run_id: String,
+    pub system_id: Option<String>,
     pub state: Option<DagState>,
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
@@ -153,17 +147,17 @@ impl fmt::Display for TaskState {
 /// A single Task. Task make up a Dag Run.
 #[derive(Object)]
 pub struct Task {
+    pub run_id: String,
     pub task_id: String,
     pub state: Option<TaskState>,
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
-    pub try_number: u32,
+    pub try_number: Option<u32>,
 }
 
 /// All Task for a Dag Run
 #[derive(Object)]
 pub struct DagRunTasks {
-    pub system: System,
     pub dag_run: DagRun,
     pub tasks: Vec<Task>,
 }
@@ -172,7 +166,7 @@ pub struct DagRunTasks {
 const PAGE_SIZE: u32 = 50;
 
 /// Pull details for a single system
-async fn system_read(
+pub async fn system_read(
     tx: &mut Transaction<'_, Postgres>,
     system_id: &str,
 ) -> Result<System, poem::Error> {
@@ -187,7 +181,7 @@ async fn system_read(
 }
 
 /// Pull details for System based off Run ID
-async fn system_for_dag_run_read(
+pub async fn system_for_dag_run_read(
     tx: &mut Transaction<'_, Postgres>,
     run_id: &str,
 ) -> Result<System, poem::Error> {
@@ -206,36 +200,18 @@ pub async fn search_systems_read(
     tx: &mut Transaction<'_, Postgres>,
     search_by: &str,
     page: &u32,
-) -> Result<SearchSystems, poem::Error> {
+) -> Result<Vec<System>, poem::Error> {
     // Compute offset
     let offset: u32 = page * PAGE_SIZE;
-    let next_offset: u32 = (page + 1) * PAGE_SIZE;
 
     // Pull the Systems
-    let systems: Vec<System> = search_systems_select(tx, search_by, PAGE_SIZE, offset)
+    search_systems_select(tx, search_by, PAGE_SIZE, offset)
         .await
-        .map_err(InternalServerError)?;
-
-    // More Systems on next page?
-    let more_systems: Vec<System> = search_systems_select(tx, search_by, PAGE_SIZE, next_offset)
-        .await
-        .map_err(InternalServerError)?;
-
-    let next_page: Option<u32> = match more_systems.is_empty() {
-        true => None,
-        false => Some(page + 1),
-    };
-
-    Ok(SearchSystems {
-        systems,
-        search_by: search_by.to_string(),
-        page: *page,
-        next_page,
-    })
+        .map_err(InternalServerError)
 }
 
 /// Pull details for a dag run
-async fn dag_run_read(
+pub async fn dag_run_read(
     tx: &mut Transaction<'_, Postgres>,
     run_id: &str,
 ) -> Result<DagRun, poem::Error> {
@@ -273,17 +249,48 @@ pub async fn tasks_for_dag_run_read(
     // Pull the DAG Run
     let dag_run: DagRun = dag_run_read(tx, run_id).await?;
 
-    // Pull the System details by Run ID
-    let system: System = system_for_dag_run_read(tx, run_id).await?;
-
     // Pull all Tasks for a Dag Run
     let tasks: Vec<Task> = tasks_for_dag_run_select(tx, run_id)
         .await
         .map_err(InternalServerError)?;
 
-    Ok(DagRunTasks {
-        system,
-        dag_run,
-        tasks,
-    })
+    Ok(DagRunTasks { dag_run, tasks })
+}
+
+/// Pull details for a task
+pub async fn task_read(
+    tx: &mut Transaction<'_, Postgres>,
+    run_id: &str,
+    task_id: &str,
+) -> Result<Task, poem::Error> {
+    // Pull details for a dag run
+    let task: Task = match task_select(tx, run_id, task_id).await {
+        Ok(task) => Ok(task),
+        Err(sqlx::Error::RowNotFound) => Err(NotFound(sqlx::Error::RowNotFound)),
+        Err(err) => Err(InternalServerError(err)),
+    }?;
+
+    Ok(task)
+}
+
+/// Return the content of a log
+pub async fn log_read(
+    config: &Config,
+    dag_id: &str,
+    run_id: &str,
+    task_id: &str,
+    attepmt: &u32,
+) -> Result<String, poem::Error> {
+    // The path to our log
+    let log_path = PathBuf::from(format!(
+        "{}/dag_id={}/run_id={}/task_id={}/attempt={}.log",
+        config.log_path, dag_id, run_id, task_id, attepmt,
+    ));
+
+    // Read Log as String from file, and do it async
+    match fs::read_to_string(log_path).await {
+        Ok(log) => Ok(log),
+        Err(err) if err.kind() == ErrorKind::NotFound => Err(NotFound(err)),
+        Err(err) => Err(InternalServerError(err)),
+    }
 }

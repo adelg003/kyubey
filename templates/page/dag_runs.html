@@ -3,46 +3,13 @@
 
 {% block body %}
 <header>
-  {% include "component/navbar.html" %}
+  {% include "include/navbar.html" %}
   <h1>Dag Runs</h1>
 </header>
 
 <main>
-  <!-- System Details -->
-  <div>
-    <div>
-      <div>Client Name</div>
-      <div>{{ system.client_name }}</div>
-    </div>
-    <div>
-      <div>Client ID</div>
-      <div>{{ system.client_id }}</div>
-    </div>
-    <div>
-      <div>System Name</div>
-      <div>{{ system.system_name }}</div>
-    </div>
-    <div>
-      <div>System ID</div>
-      <div>{{ system.system_id }}</div>
-    </div>
-    <div>
-      <div>Team Name</div>
-      <div>{{ system.team_name }}</div>
-    </div>
-    <div>
-      <div>Team ID</div>
-      <div>{{ system.team_id }}</div>
-    </div>
-    <div>
-      <div>Lastest Dagrun</div>
-      <div>{{ system.latest_run }}</div>
-    </div>
-    <div>
-      <div>Number of Dagruns</div>
-      <div>{{ system.number_of_dag_runs }}</div>
-    </div>
-  </div>
+  {% include "include/system.html" %}
+
   <!-- Dag Run table -->
   <table>
     <thead>

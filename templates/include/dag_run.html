@@ -1,0 +1,39 @@
+<!-- Dag Run Details -->
+<div>
+  <div>
+    <div>DAG ID</div>
+    <div>{{ dag_run.dag_id }}</div>
+  </div>
+  <div>
+    <div>Execution Date</div>
+    <div>{{ dag_run.execution_date }}</div>
+  </div>
+  <div>
+    <div>Run ID</div>
+    <div>{{ dag_run.run_id }}</div>
+  </div>
+  <div>
+    <div>State</div>
+    {% if let Some(state) = dag_run.state %}
+    <div>{{ state }}</div>
+    {% else %}
+    <div></div>
+    {% endif %}
+  </div>
+  <div>
+    <div>Start Date</div>
+    {% if let Some(start_date) = dag_run.start_date %}
+    <div>{{ start_date }}</div>
+    {% else %}
+    <div></div>
+    {% endif %}
+  </div>
+  <div>
+    <div>End Date</div>
+    {% if let Some(end_date) = dag_run.end_date %}
+    <div>{{ end_date }}</div>
+    {% else %}
+    <div></div>
+    {% endif %}
+  </div>
+</div>

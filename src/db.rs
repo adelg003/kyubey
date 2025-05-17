@@ -48,6 +48,7 @@ struct DagRunRow {
     dag_id: String,
     execution_date: DateTime<Utc>,
     run_id: String,
+    system_id: Option<String>,
     state: Option<String>,
     start_date: Option<DateTime<Utc>>,
     end_date: Option<DateTime<Utc>>,
@@ -65,6 +66,7 @@ impl DagRunRow {
             dag_id: self.dag_id,
             execution_date: self.execution_date,
             run_id: self.run_id,
+            system_id: self.system_id,
             state,
             start_date: self.start_date,
             end_date: self.end_date,
@@ -74,6 +76,7 @@ impl DagRunRow {
 
 /// A row of the Task table
 struct TaskRow {
+    run_id: String,
     task_id: String,
     state: Option<String>,
     start_date: Option<DateTime<Utc>>,
@@ -83,22 +86,24 @@ struct TaskRow {
 
 impl TaskRow {
     /// Convert a TaskRow to a Task
-    fn into_task(self) -> Option<Task> {
-        match self {
-            TaskRow {
-                task_id,
-                state,
-                start_date,
-                end_date,
-                try_number: Some(try_number),
-            } => Some(Task {
-                task_id,
-                state: TaskState::from_str(&state?).ok(),
-                start_date,
-                end_date,
-                try_number: u32::try_from(try_number).ok()?,
-            }),
-            _ => None,
+    fn into_task(self) -> Task {
+        let state: Option<TaskState> = match self.state {
+            Some(text) => TaskState::from_str(&text).ok(),
+            None => None,
+        };
+
+        let try_number: Option<u32> = match self.try_number {
+            Some(number) => u32::try_from(number).ok(),
+            None => None,
+        };
+
+        Task {
+            run_id: self.run_id,
+            task_id: self.task_id,
+            state,
+            start_date: self.start_date,
+            end_date: self.end_date,
+            try_number,
         }
     }
 }
@@ -291,6 +296,7 @@ pub async fn dag_runs_by_system_select(
             dag_run.dag_id,
             dag_run.execution_date,
             dag_run.run_id,
+            api_trigger.details ->> 'system_id' AS system_id,
             dag_run.state,
             dag_run.start_date,
             dag_run.end_date
@@ -333,16 +339,21 @@ pub async fn dag_run_select(
     let row = query_as!(
         DagRunRow,
         "SELECT
-            dag_id,
-            execution_date,
-            run_id,
-            state,
-            start_date,
-            end_date
+            dag_run.dag_id,
+            dag_run.execution_date,
+            dag_run.run_id,
+            api_trigger.details ->> 'system_id' AS system_id,
+            dag_run.state,
+            dag_run.start_date,
+            dag_run.end_date
         FROM
             dag_run
+        LEFT JOIN
+            api_trigger
+        ON
+            dag_run.run_id = api_trigger.run_id
         WHERE
-            run_id = $1
+            dag_run.run_id = $1
         ",
         run_id,
     )
@@ -364,6 +375,7 @@ pub async fn tasks_for_dag_run_select(
     let rows = query_as!(
         TaskRow,
         "SELECT
+            run_id,
             task_id,
             state,
             start_date,
@@ -385,8 +397,41 @@ pub async fn tasks_for_dag_run_select(
     // Filter out partial dag run rows. Only full details allowed
     let tasks: Vec<Task> = rows
         .into_iter()
-        .filter_map(|row: TaskRow| row.into_task())
+        .map(|row: TaskRow| row.into_task())
         .collect();
 
     Ok(tasks)
+}
+
+/// Featch a single Task details
+pub async fn task_select(
+    tx: &mut Transaction<'_, Postgres>,
+    run_id: &str,
+    task_id: &str,
+) -> Result<Task, sqlx::Error> {
+    // Pull all tasks for a dag run
+    let row = query_as!(
+        TaskRow,
+        "SELECT
+            run_id,
+            task_id,
+            state,
+            start_date,
+            end_date,
+            try_number
+        FROM
+            task_instance
+        WHERE
+            run_id = $1
+            AND task_id = $2",
+        run_id,
+        task_id,
+    )
+    .fetch_one(&mut **tx)
+    .await?;
+
+    // Filter out partial system rows. Only full details allowed
+    let task: Task = row.into_task();
+
+    Ok(task)
 }
