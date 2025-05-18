@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n            details ->> 'client_name' AS client_name,\n            details ->> 'client_id' AS client_id,\n            details ->> 'system_name' AS system_name,\n            details ->> 'system_id' AS system_id,\n            details ->> 'team_name' AS team_name,\n            details ->> 'team_id' AS team_id,\n            MAX(execution_date) AS latest_run,\n            COUNT(*) as number_of_dag_runs\n        FROM\n            api_trigger\n        WHERE\n            details ->> 'system_id' = $1\n        GROUP BY\n            details ->> 'client_name',\n            details ->> 'client_id',\n            details ->> 'system_name',\n            details ->> 'system_id',\n            details ->> 'team_name',\n            details ->> 'team_id'\n        HAVING\n            details ->> 'client_name' IS NOT NULL\n            AND details ->> 'client_id' IS NOT NULL\n            AND details ->> 'system_name' IS NOT NULL\n            AND details ->> 'system_id' IS NOT NULL\n            AND details ->> 'team_name' IS NOT NULL\n            AND details ->> 'team_id' IS NOT NULL\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "client_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "client_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "system_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "system_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "team_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "team_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "latest_run",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 7,
+        "name": "number_of_dag_runs",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "3c0cde4a476dd1c106ad1d9c69ab6b7fb275a673a7b0ae26707d7b5d2b431772"
+}
