@@ -10,8 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install Just
-        run: sudo apt install just
+      - name: Install Just and Trivy
+        run: sudo apt install just trivy
       - name: Trivy Repo Scan
         run: just trivy-repo
 
@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install Just
-        run: sudo apt install just
+      - name: Install Just and Trivy
+        run: sudo apt install just trivy
       - name: Trivy Image Scan
         run: just trivy-image

@@ -38,6 +38,15 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_DB: airflow_db
+          POSTGRES_USER: airflow_user
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
     steps:
       - uses: actions/checkout@v4
       - name: Install Just
@@ -51,6 +60,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Just
         run: sudo apt install just
+      - name: Install SQLx cli
+        run: just sqlx-install
       - name: SQLx Cache Check
         run: just sqlx-check
 
@@ -60,5 +71,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Just
         run: sudo apt install just
+      - name: Install Cargo Deny
+        run: just deny-install
       - name: Cargo Deny Checks
         run: just deny
