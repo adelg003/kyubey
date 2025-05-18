@@ -1,0 +1,25 @@
+name: Trivy
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  trivy-repo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Just
+        run: sudo apt install just
+      - name: Trivy Repo Scan
+        run: just trivy-repo
+
+  trivy-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Just
+        run: sudo apt install just
+      - name: Trivy Image Scan
+        run: just trivy-image

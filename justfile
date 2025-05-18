@@ -188,12 +188,15 @@ podman-kill:
 ## Trivy ##
 ###########
 
+# Trivy Scan the code repo
 trivy-repo:
   trivy repo .
 
+# Trivy Scan the Docker image
 trivy-image: docker-build
   trivy image localhost/kyubey:latest
 
+# Trivy Scan the Docker image via podman
 trivy-image-podman: podman-build
   trivy image localhost/kyubey:latest
 

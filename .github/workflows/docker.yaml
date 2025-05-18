@@ -1,0 +1,16 @@
+name: Docker
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Just
+        run: sudo apt install just
+      - name: Container Build Check
+        run: just docker-build
