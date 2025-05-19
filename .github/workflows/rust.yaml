@@ -16,7 +16,7 @@ jobs:
       - name: Install Just
         run: sudo apt install just
       - name: Check
-        run: just check
+        run: just check_w_sqlx_cache
 
   clippy:
     runs-on: ubuntu-latest
@@ -25,7 +25,7 @@ jobs:
       - name: Install Just
         run: sudo apt install just
       - name: Clippy
-        run: just clippy
+        run: just clippy_w_sqlx_cache
 
   fmt-check:
     runs-on: ubuntu-latest
@@ -51,6 +51,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Just
         run: sudo apt install just
+      - name: Install SQLx cli
+        run: just sqlx-install
+      - name: Run SQLx Migration
+        run: just sqlx-migrate
       - name: Tests
         run: just test
 
@@ -62,6 +66,8 @@ jobs:
         run: sudo apt install just
       - name: Install SQLx cli
         run: just sqlx-install
+      - name: Run SQLx Migration
+        run: just sqlx-migrate
       - name: SQLx Cache Check
         run: just sqlx-check
 

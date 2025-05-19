@@ -22,10 +22,18 @@ run-release:
 
 # Check Rust Code
 check:
+  cargo check --locked
+
+# Check Rust Code using the SQLx Cache
+check_w_sqlx_cache:
   SQLX_OFFLINE=true cargo check --locked
 
 # Check Rust Linting
 clippy:
+  cargo clippy --locked -- --deny warnings
+
+# Check Rust Linting using SQLx Cache
+clippy_w_sqlx_cache:
   SQLX_OFFLINE=true cargo clippy --locked -- --deny warnings
 
 # Apply Rust Formating
@@ -36,13 +44,17 @@ fmt:
 fmt-check:
   cargo fmt --check --verbose
 
+# Check Rust Unittest
+test:
+  cargo test --locked
+
 # Install SQLx-CLI
 sqlx-install:
   cargo install sqlx-cli --locked
 
-# Check Rust Unittest
-test:
-  cargo test --locked
+# SQLx DB Migration
+sqlx-migrate:
+  sqlx migrate run
 
 # Refresh SQLx Cache
 sqlx-prepare:
@@ -193,19 +205,16 @@ trivy-repo:
   trivy repo .
 
 # Trivy Scan the Docker image
-trivy-image: docker-build
+trivy-image:
   trivy image localhost/kyubey:latest
 
-# Trivy Scan the Docker image via podman
-trivy-image-podman: podman-build
-  trivy image localhost/kyubey:latest
 
 ############
 ## Github ##
 ############
 
 # Run all Github Rust Checks
-github-rust-checks: check clippy fmt-check test sqlx-check deny
+github-rust-checks: sqlx-migrate sqlx-check check_w_sqlx_cache clippy_w_sqlx_cache fmt-check test deny
 
 # Run all Github HTML Checks
 github-html-checks: prettier-check
@@ -219,11 +228,8 @@ github-podman-checks: podman-build
 # Run all Github Trivy Checks
 github-trivy-checks: trivy-repo trivy-image
 
-# Run all Github Trivy Checks via Podman
-github-trivy-checks-podman: trivy-repo trivy-image-podman
-
 # Run all Github Checks
 github-checks: github-rust-checks github-html-checks github-docker-checks github-trivy-checks
 
 # Run all Github Checks via Podman
-github-checks-podman: github-rust-checks github-html-checks github-podman-checks github-trivy-checks-podman
+github-checks-podman: github-rust-checks github-html-checks github-podman-checks github-trivy-checks

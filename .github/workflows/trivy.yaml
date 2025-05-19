@@ -35,5 +35,7 @@ jobs:
           echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
           sudo apt update
           sudo apt install trivy
+      - name: Image Build
+        run: just docker-build
       - name: Trivy Image Scan
         run: just trivy-image

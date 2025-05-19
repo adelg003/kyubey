@@ -12,5 +12,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Just
         run: sudo apt install just
-      - name: Container Build Check
+      - name: Image Build Check
         run: just docker-build
