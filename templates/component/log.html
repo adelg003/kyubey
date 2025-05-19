@@ -1,0 +1,17 @@
+<!-- Logs -->
+<div id="logs">
+  {% for current_try in 1..=try_number %} {% if current_try == attempt %}
+  <strong>Attempt: {{ current_try }}</strong>
+  {% else %}
+  <a
+    hx-get="/component/log?dag_id={{ dag_id }}&run_id={{ run_id }}&task_id={{ task_id }}&attempt={{ current_try }}"
+    hx-trigger="click"
+    hx-swap="outerHTML"
+    hx-target="#logs"
+    >Attempt: {{ current_try }}</a
+  >
+  {% endif %} {% endfor %}
+</div>
+<pre>
+{{ log }}
+</pre>

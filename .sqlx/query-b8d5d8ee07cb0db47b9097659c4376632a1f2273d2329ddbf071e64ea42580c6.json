@@ -1,0 +1,58 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n            dag_run.dag_id,\n            dag_run.execution_date,\n            dag_run.run_id,\n            api_trigger.details ->> 'system_id' AS system_id,\n            dag_run.state,\n            dag_run.start_date,\n            dag_run.end_date\n        FROM\n            dag_run\n        INNER JOIN\n            api_trigger\n        ON\n            dag_run.run_id = api_trigger.run_id\n        WHERE\n            api_trigger.details ->> 'system_id' = $1\n            AND api_trigger.details ->> 'client_name' IS NOT NULL\n            AND api_trigger.details ->> 'client_id' IS NOT NULL\n            AND api_trigger.details ->> 'system_name' IS NOT NULL\n            AND api_trigger.details ->> 'team_name' IS NOT NULL\n            AND api_trigger.details ->> 'team_id' IS NOT NULL\n       ORDER BY\n            dag_run.execution_date,\n            dag_run.dag_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "dag_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "execution_date",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "run_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "system_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "state",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "start_date",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "end_date",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "b8d5d8ee07cb0db47b9097659c4376632a1f2273d2329ddbf071e64ea42580c6"
+}

@@ -1,0 +1,7 @@
+{
+  "devDependencies": {
+    "htmx.org": "^1.9.12",
+    "prettier": "^3.5.3",
+    "prettier-plugin-tailwindcss": "^0.6.11"
+  }
+}

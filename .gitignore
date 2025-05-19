@@ -20,6 +20,11 @@ target/
 
 /target
 
-
 # Ignore generated / working data
 gitignore/
+
+# Node
+node_modules/
+
+# Build generate code
+assets/scripts/
