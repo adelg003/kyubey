@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n            details ->> 'client_name' AS client_name,\n            details ->> 'client_id' AS client_id,\n            details ->> 'system_name' AS system_name,\n            details ->> 'system_id' AS system_id,\n            MAX(execution_date) AS latest_run,\n            COUNT(*) as number_of_dag_runs\n        FROM\n            api_trigger\n        WHERE\n            details ->> 'system_id' = $1\n        GROUP BY\n            details ->> 'client_name',\n            details ->> 'client_id',\n            details ->> 'system_name',\n            details ->> 'system_id'\n        HAVING\n            details ->> 'client_name' IS NOT NULL\n            AND details ->> 'client_id' IS NOT NULL\n            AND details ->> 'system_name' IS NOT NULL\n            AND details ->> 'system_id' IS NOT NULL\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "client_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "client_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "system_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "system_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "latest_run",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 5,
+        "name": "number_of_dag_runs",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "47c7d11484582986b4d16662d47465dbbe41acdf6b4bbde3973cec5b563ec10d"
+}
