@@ -1,14 +1,29 @@
-<nav>
-  <div>
+<!-- Navbar -->
+<nav class="breadcrumbs ml-8">
     <ul>
-      <li><a href="/">Search</a></li>
-      {% if let Some(system_id) = navbar.system_id %}
-      <li><a href="/dag_runs/{{ system_id }}">DagRuns</a></li>
-      {% if let Some(run_id) = navbar.run_id %}
-      <li><a href="/tasks/{{ run_id }}">Tasks</a></li>
-      {% if let Some(task_id) = navbar.task_id %}
-      <li><a href="/logs/{{ run_id }}/{{ task_id }}">Logs</a></li>
-      {% endif %} {% endif %} {% endif %}
+        <li>
+            <a href="/">Search</a>
+        </li>
+
+        <!-- Are we as deep as the System page? -->
+        {% if let Some(system_id) = navbar.system_id %}
+            <li>
+                <a href="/dag_runs/{{ system_id }}">DagRuns</a>
+            </li>
+
+            <!-- Are we as deep as the Dag Run page? -->
+            {% if let Some(run_id) = navbar.run_id %}
+                <li>
+                    <a href="/tasks/{{ run_id }}">Tasks</a>
+                </li>
+
+                <!-- Are we as deep as the Task page? -->
+                {% if let Some(task_id) = navbar.task_id %}
+                    <li>
+                        <a href="/logs/{{ run_id }}/{{ task_id }}">Logs</a>
+                    </li>
+                {% endif %}
+            {% endif %}
+        {% endif %}
     </ul>
-  </div>
 </nav>

@@ -1,43 +1,47 @@
-<!-- prettier-ignore -->
 {% extends "layout/base.html" %}
-
 {% block body %}
-<header>
-  {% include "include/navbar.html" %}
-  <h1>Search</h1>
-</header>
+  <header>
+    <!-- Nav Bar -->
+    {% include "include/navbar.html" %}
 
-<main>
-  <!-- Search for a System -->
-  <input
-    id="search_by_input"
-    name="search_by"
-    type="search"
-    placeholder="Begin typing to search Systems..."
-    hx-get="/component/search_systems?page=0"
-    hx-trigger="keyup changed delay:250ms search"
-    hx-target="#search_results"
-    hx-swap="innerHTML"
-  />
+    <!-- Page Title Bar -->
+    {% let title = "Search" %}
+    {% include "include/title.html" %}
+  </header>
+  <main>
 
-  <!-- Systems table -->
-  <table>
-    <thead>
-      <tr>
-        <th>Client Name</th>
-        <th>Client ID</th>
-        <th>System Name</th>
-        <th>System ID</th>
-        <th>Team Name</th>
-        <th>Team ID</th>
-        <th>Lastest Dagrun</th>
-        <th>Number of Dagruns</th>
-        <th>Dagruns</th>
-      </tr>
-    </thead>
-    <tbody id="search_results">
-      {{ search|safe }}
-    </tbody>
-  </table>
-</main>
+    <!-- Search for a System -->
+    <fieldset class="fieldset m-8 animate-fade">
+      <legend class="fieldset-legend">Search by:</legend>
+      <input
+        id="search_by_input"
+        name="search_by"
+        class="input"
+        type="search"
+        placeholder="Begin typing to search Systems..."
+        hx-get="/component/search_systems?page=0"
+        hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
+        hx-target="#search_results"
+        hx-swap="innerHTML"
+      />
+    </fieldset>
+
+    <!-- Systems table -->
+    <table class="table table-zebra table-sm animate-fade">
+      <thead>
+        <tr>
+          <th>Client Name</th>
+          <th>Client ID</th>
+          <th>System Name</th>
+          <th>System ID</th>
+          <th>Lastest Dagrun</th>
+          <th>Number of Dagruns</th>
+        </tr>
+      </thead>
+      <tbody id="search_results">
+        {{ search|safe }}
+      </tbody>
+    </table>
+
+  </main>
 {% endblock %}

@@ -1,39 +1,41 @@
 <!-- Dag Run Details -->
-<div>
-  <div>
-    <div>DAG ID</div>
-    <div>{{ dag_run.dag_id }}</div>
+<div class="stats shadow">
+
+  <!-- Dag ID and Run ID -->
+  <div class="stat">
+    <div class="stat-title">DAG ID</div>
+    <div class="stat-value">{{ dag_run.dag_id }}</div>
+    <div class="stat-desc">Run ID: {{ dag_run.run_id }}</div>
   </div>
-  <div>
-    <div>Execution Date</div>
-    <div>{{ dag_run.execution_date }}</div>
+
+  <!-- Execution Date -->
+  <div class="stat">
+    <div class="stat-title">Execution Data</div>
+    <div class="stat-value">{{ dag_run.execution_date }}</div>
+    <div class="stat-desc">
+      {% if let Some(start_date) = dag_run.start_date %}
+        Start Date: {{ start_date }};
+      {% endif %}
+      {% if let Some(end_date) = dag_run.end_date %}
+        End Date: {{ end_date }}
+      {% endif %}
+    </div>
   </div>
-  <div>
-    <div>Run ID</div>
-    <div>{{ dag_run.run_id }}</div>
-  </div>
-  <div>
-    <div>State</div>
-    {% if let Some(state) = dag_run.state %}
-    <div>{{ state }}</div>
-    {% else %}
-    <div></div>
-    {% endif %}
-  </div>
-  <div>
-    <div>Start Date</div>
-    {% if let Some(start_date) = dag_run.start_date %}
-    <div>{{ start_date }}</div>
-    {% else %}
-    <div></div>
-    {% endif %}
-  </div>
-  <div>
-    <div>End Date</div>
-    {% if let Some(end_date) = dag_run.end_date %}
-    <div>{{ end_date }}</div>
-    {% else %}
-    <div></div>
-    {% endif %}
+
+  <!-- Dag State -->
+  <div class="stat">
+    <div class="stat-title">State</div>
+    {% match dag_run.state %}
+      {% when Some(DagState::Failed) %}
+        <div class="stat-value badge badge-xl badge-error">failed</div>
+      {% when Some(DagState::Queued) %}
+        <div class="stat-value badge badge-xl badge-neutral">queued</div>
+      {% when Some(DagState::Running) %}
+        <div class="stat-value badge badge-xl badge-primary">running</div>
+      {% when Some(DagState::Success) %}
+        <div class="stat-value badge badge-xl badge-success">success</div>
+      {% when None %}
+    {% endmatch %}
+    <div class="stat-desc"></div>
   </div>
 </div>

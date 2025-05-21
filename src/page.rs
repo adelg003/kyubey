@@ -2,8 +2,9 @@ use crate::{
     Config,
     component::{LogComponent, SearchComponent, log_component, search_systems_component},
     core::{
-        DagRun, DagRunTasks, System, SystemDagRuns, Task, dag_run_read, dag_runs_for_system_read,
-        system_for_dag_run_read, system_read, task_read, tasks_for_dag_run_read,
+        DagRun, DagRunTasks, DagState, System, SystemDagRuns, Task, TaskState, dag_run_read,
+        dag_runs_for_system_read, system_for_dag_run_read, system_read, task_read,
+        tasks_for_dag_run_read,
     },
 };
 use askama::Template;

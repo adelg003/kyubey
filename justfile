@@ -122,19 +122,6 @@ pg-cli:
     --driver=postgres
 
 
-##########
-## HTML ##
-##########
-
-# Appply Prettier formatting to HTML
-prettier:
-  npx prettier --write templates/
-
-# Prettier Check for HTML
-prettier-check:
-  npx prettier --check templates/
-
-
 ############
 ## Docker ##
 ############
@@ -216,9 +203,6 @@ trivy-image:
 # Run all Github Rust Checks
 github-rust-checks: sqlx-migrate sqlx-check check_w_sqlx_cache clippy_w_sqlx_cache fmt-check test deny
 
-# Run all Github HTML Checks
-github-html-checks: prettier-check
-
 # Run all Github Docker Checks
 github-docker-checks: docker-build
 
@@ -229,7 +213,7 @@ github-podman-checks: podman-build
 github-trivy-checks: trivy-repo trivy-image
 
 # Run all Github Checks
-github-checks: github-rust-checks github-html-checks github-docker-checks github-trivy-checks
+github-checks: github-rust-checks github-docker-checks github-trivy-checks
 
 # Run all Github Checks via Podman
-github-checks-podman: github-rust-checks github-html-checks github-podman-checks github-trivy-checks
+github-checks-podman: github-rust-checks github-podman-checks github-trivy-checks

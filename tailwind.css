@@ -1,0 +1,6 @@
+@import "tailwindcss" source(none);
+@import "tailwindcss-animated";
+@plugin "daisyui" {
+    themes: light --default, dark --prefersdark;
+}
+@source "./templates/**/*.html";

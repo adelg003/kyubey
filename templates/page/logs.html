@@ -1,17 +1,26 @@
-<!-- prettier-ignore -->
 {% extends "layout/base.html" %}
-
 {% block body %}
-<header>
-  {% include "include/navbar.html" %}
-  <h1>Logs</h1>
-</header>
+  <header>
+    <!-- Nav Bar -->
+    {% include "include/navbar.html" %}
 
-<main>
-  {% include "include/system.html" %} {% include "include/dag_run.html" %} {%
-  include "include/task.html" %}
+    <!-- Page Title Bar -->
+    {% let title = "Logs" %}
+    {% include "include/title.html" %}
+  </header>
+  <main>
+    <!-- System Stats -->
+    {% include "include/system.html" %}
 
-  <!-- Logs -->
-  {{ log|safe }}
-</main>
+    <!-- Dag Run Stats -->
+    {% include "include/dag_run.html" %}
+
+    <!-- Task Stats -->
+    <div class="animate-fade">
+      {% include "include/task.html" %}
+    </div>
+
+    <!-- Logs -->
+    {{ log|safe }}
+  </main>
 {% endblock %}

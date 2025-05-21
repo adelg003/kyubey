@@ -1,35 +1,24 @@
 <!-- System Details -->
-<div>
-  <div>
-    <div>Client Name</div>
-    <div>{{ system.client_name }}</div>
+<div class="stats shadow">
+
+  <!-- Client -->
+  <div class="stat">
+    <div class="stat-title">Client Name</div>
+    <div class="stat-value">{{ system.client_name }}</div>
+    <div class="stat-desc">ID: {{ system.client_id }}</div>
   </div>
-  <div>
-    <div>Client ID</div>
-    <div>{{ system.client_id }}</div>
+
+  <!-- System -->
+  <div class="stat">
+    <div class="stat-title">System Name</div>
+    <div class="stat-value">{{ system.system_name }}</div>
+    <div class="stat-desc">ID: {{ system.system_id }}</div>
   </div>
-  <div>
-    <div>System Name</div>
-    <div>{{ system.system_name }}</div>
-  </div>
-  <div>
-    <div>System ID</div>
-    <div>{{ system.system_id }}</div>
-  </div>
-  <div>
-    <div>Team Name</div>
-    <div>{{ system.team_name }}</div>
-  </div>
-  <div>
-    <div>Team ID</div>
-    <div>{{ system.team_id }}</div>
-  </div>
-  <div>
-    <div>Lastest Dagrun</div>
-    <div>{{ system.latest_run }}</div>
-  </div>
-  <div>
-    <div>Number of Dagruns</div>
-    <div>{{ system.number_of_dag_runs }}</div>
+
+  <!-- Dag Runs -->
+  <div class="stat">
+    <div class="stat-title">Number of Dagruns</div>
+    <div class="stat-value text-left">{{ system.number_of_dag_runs }}</div>
+    <div class="stat-desc">Latest: {{ system.latest_run }}</div>
   </div>
 </div>
