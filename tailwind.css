@@ -3,4 +3,4 @@
 @plugin "daisyui" {
     themes: light --default, dark --prefersdark;
 }
-@source "./templates/**/*.html";
+@source "./src/ui/*.rs";

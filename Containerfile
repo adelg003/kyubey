@@ -15,7 +15,7 @@ COPY ./package.json ./package.json
 COPY ./package-lock.json ./package-lock.json
 COPY ./.sqlx ./.sqlx
 COPY ./src ./src
-COPY ./templates ./templates
+COPY ./tailwind.css ./tailwind.css
 
 # Build Rust Application
 RUN SQLX_OFFLINE=true cargo build --release --locked

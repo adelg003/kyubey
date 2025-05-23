@@ -11,18 +11,15 @@ env.CARGO_TERM_COLOR = "always"
 [jobs.check]
 command = ["cargo", "check"]
 need_stdout = false
-watch = ["templates"]
 
 [jobs.check-all]
 command = ["cargo", "check", "--all-targets"]
 need_stdout = false
-watch = ["templates"]
 
 # Run clippy on the default target
 [jobs.clippy]
 command = ["cargo", "clippy"]
 need_stdout = false
-watch = ["templates"]
 
 # Run clippy on all targets
 # To disable some lints, you may change the job this way:
@@ -39,7 +36,6 @@ watch = ["templates"]
 [jobs.clippy-all]
 command = ["cargo", "clippy", "--all-targets"]
 need_stdout = false
-watch = ["templates"]
 
 # This job lets you run
 # - all tests: bacon test
@@ -48,7 +44,6 @@ watch = ["templates"]
 [jobs.test]
 command = ["cargo", "test"]
 need_stdout = true
-watch = ["templates"]
 
 [jobs.nextest]
 command = [
@@ -57,12 +52,10 @@ command = [
 ]
 need_stdout = true
 analyzer = "nextest"
-watch = ["templates"]
 
 [jobs.doc]
 command = ["cargo", "doc", "--no-deps"]
 need_stdout = false
-watch = ["templates"]
 
 # If the doc compiles, then it opens in your browser and bacon switches
 # to the previous job
@@ -70,7 +63,6 @@ watch = ["templates"]
 command = ["cargo", "doc", "--no-deps", "--open"]
 need_stdout = false
 on_success = "back" # so that we don't open the browser at each change
-watch = ["templates"]
 
 # You can run your application and have the result displayed in bacon,
 # if it makes sense for this crate.
@@ -82,7 +74,6 @@ command = [
 need_stdout = true
 allow_warnings = true
 background = true
-watch = ["templates"]
 
 # Run your long-running application (eg server) and have the result displayed in bacon.
 # For programs that never stop (eg a server), `background` is set to false
@@ -101,7 +92,6 @@ need_stdout = true
 allow_warnings = true
 background = false
 on_change_strategy = "kill_then_restart"
-watch = ["templates"]
 
 # This parameterized job runs the example of your choice, as soon
 # as the code compiles.
@@ -111,7 +101,6 @@ watch = ["templates"]
 command = ["cargo", "run", "--example"]
 need_stdout = true
 allow_warnings = true
-watch = ["templates"]
 
 # You may define here keybindings that would be specific to
 # a project, for example a shortcut to launch a specific job.
