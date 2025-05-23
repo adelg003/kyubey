@@ -154,6 +154,10 @@ docker-follow:
 docker-kill:
   docker kill kyubey
 
+# Test the Healthcheck and that the service came up (Docker only)
+docker-healthcheck:
+  sh ./scripts/test_healthcheck.sh
+
 # Build the Docker image via Podman
 podman-build:
   podman build . --file Containerfile --tag localhost/kyubey:latest
@@ -204,7 +208,7 @@ trivy-image:
 github-rust-checks: sqlx-migrate sqlx-check check_w_sqlx_cache clippy_w_sqlx_cache fmt-check test deny
 
 # Run all Github Docker Checks
-github-docker-checks: docker-build
+github-docker-checks: docker-build docker-run docker-healthcheck docker-kill
 
 # Run all Github Docker Checks via Podman
 github-podman-checks: podman-build

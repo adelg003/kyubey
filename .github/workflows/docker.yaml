@@ -14,3 +14,16 @@ jobs:
         run: sudo apt install just
       - name: Image Build Check
         run: just docker-build
+
+  docker-healthcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Just
+        run: sudo apt install just
+      - name: Image Build
+        run: just docker-build
+      - name: Container Startup
+        run: just docker-run
+      - name: Container Healthcheck
+        run: just docker-healthcheck
