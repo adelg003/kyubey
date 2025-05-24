@@ -14,3 +14,31 @@ jobs:
         run: sudo apt install just
       - name: Image Build Check
         run: just docker-build
+
+  docker-healthcheck:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_DB: airflow_db
+          POSTGRES_USER: airflow_user
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Just
+        run: sudo apt install just
+      - name: Install SQLx cli
+        run: just sqlx-install
+      - name: Run SQLx Migration
+        run: just sqlx-migrate
+      - name: Image Build
+        run: just docker-build
+      - name: Container Startup
+        run: just docker-run
+      - name: Container Healthcheck
+        run: just docker-healthcheck
+      - name: Container Stop
+        run: just docker-kill

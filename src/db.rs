@@ -9,8 +9,6 @@ struct SystemRow {
     client_id: Option<String>,
     system_name: Option<String>,
     system_id: Option<String>,
-    team_name: Option<String>,
-    team_id: Option<String>,
     latest_run: Option<NaiveDateTime>,
     number_of_dag_runs: Option<i64>,
 }
@@ -24,8 +22,6 @@ impl SystemRow {
                 client_id: Some(client_id),
                 system_name: Some(system_name),
                 system_id: Some(system_id),
-                team_name: Some(team_name),
-                team_id: Some(team_id),
                 latest_run: Some(latest_run),
                 number_of_dag_runs: Some(number_of_dag_runs),
             } => Some(System {
@@ -33,8 +29,6 @@ impl SystemRow {
                 client_id,
                 system_name,
                 system_id,
-                team_name,
-                team_id,
                 latest_run: Utc.from_utc_datetime(&latest_run),
                 number_of_dag_runs: u64::try_from(number_of_dag_runs).ok()?,
             }),
@@ -121,8 +115,6 @@ pub async fn system_select(
             details ->> 'client_id' AS client_id,
             details ->> 'system_name' AS system_name,
             details ->> 'system_id' AS system_id,
-            details ->> 'team_name' AS team_name,
-            details ->> 'team_id' AS team_id,
             MAX(execution_date) AS latest_run,
             COUNT(*) as number_of_dag_runs
         FROM
@@ -133,16 +125,12 @@ pub async fn system_select(
             details ->> 'client_name',
             details ->> 'client_id',
             details ->> 'system_name',
-            details ->> 'system_id',
-            details ->> 'team_name',
-            details ->> 'team_id'
+            details ->> 'system_id'
         HAVING
             details ->> 'client_name' IS NOT NULL
             AND details ->> 'client_id' IS NOT NULL
             AND details ->> 'system_name' IS NOT NULL
             AND details ->> 'system_id' IS NOT NULL
-            AND details ->> 'team_name' IS NOT NULL
-            AND details ->> 'team_id' IS NOT NULL
         ",
         system_id,
     )
@@ -171,8 +159,6 @@ pub async fn system_for_dag_run_select(
             a.details ->> 'client_id' AS client_id,
             a.details ->> 'system_name' AS system_name,
             a.details ->> 'system_id' AS system_id,
-            a.details ->> 'team_name' AS team_name,
-            a.details ->> 'team_id' AS team_id,
             MAX(a.execution_date) AS latest_run,
             COUNT(a.*) as number_of_dag_runs
         FROM
@@ -191,16 +177,12 @@ pub async fn system_for_dag_run_select(
             a.details ->> 'client_name',
             a.details ->> 'client_id',
             a.details ->> 'system_name',
-            a.details ->> 'system_id',
-            a.details ->> 'team_name',
-            a.details ->> 'team_id'
+            a.details ->> 'system_id'
         HAVING
             a.details ->> 'client_name' IS NOT NULL
             AND a.details ->> 'client_id' IS NOT NULL
             AND a.details ->> 'system_name' IS NOT NULL
             AND a.details ->> 'system_id' IS NOT NULL
-            AND a.details ->> 'team_name' IS NOT NULL
-            AND a.details ->> 'team_id' IS NOT NULL
         ",
         run_id,
     )
@@ -234,8 +216,6 @@ pub async fn search_systems_select(
             details ->> 'client_id' AS client_id,
             details ->> 'system_name' AS system_name,
             details ->> 'system_id' AS system_id,
-            details ->> 'team_name' AS team_name,
-            details ->> 'team_id' AS team_id,
             MAX(execution_date) AS latest_run,
             COUNT(*) as number_of_dag_runs
         FROM
@@ -245,22 +225,16 @@ pub async fn search_systems_select(
             OR details ->> 'client_id' ILIKE $1
             OR details ->> 'system_name' ILIKE $1
             OR details ->> 'system_id' ILIKE $1
-            OR details ->> 'team_name' ILIKE $1
-            OR details ->> 'team_id' ILIKE $1
         GROUP BY
             details ->> 'client_name',
             details ->> 'client_id',
             details ->> 'system_name',
-            details ->> 'system_id',
-            details ->> 'team_name',
-            details ->> 'team_id'
+            details ->> 'system_id'
         HAVING
             details ->> 'client_name' IS NOT NULL
             AND details ->> 'client_id' IS NOT NULL
             AND details ->> 'system_name' IS NOT NULL
             AND details ->> 'system_id' IS NOT NULL
-            AND details ->> 'team_name' IS NOT NULL
-            AND details ->> 'team_id' IS NOT NULL
         ORDER BY
             MAX(execution_date) DESC,
             details ->> 'system_id'

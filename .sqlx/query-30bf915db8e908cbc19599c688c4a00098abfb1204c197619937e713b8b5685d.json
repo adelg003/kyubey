@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n            a.details ->> 'client_name' AS client_name,\n            a.details ->> 'client_id' AS client_id,\n            a.details ->> 'system_name' AS system_name,\n            a.details ->> 'system_id' AS system_id,\n            MAX(a.execution_date) AS latest_run,\n            COUNT(a.*) as number_of_dag_runs\n        FROM\n            api_trigger a\n        WHERE\n            EXISTS(\n                SELECT\n                    *\n                FROM\n                    api_trigger b\n                WHERE\n                    b.details ->> 'system_id' = a.details ->> 'system_id'\n                    AND b.run_id = $1\n            )\n        GROUP BY\n            a.details ->> 'client_name',\n            a.details ->> 'client_id',\n            a.details ->> 'system_name',\n            a.details ->> 'system_id'\n        HAVING\n            a.details ->> 'client_name' IS NOT NULL\n            AND a.details ->> 'client_id' IS NOT NULL\n            AND a.details ->> 'system_name' IS NOT NULL\n            AND a.details ->> 'system_id' IS NOT NULL\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "client_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "client_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "system_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "system_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "latest_run",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 5,
+        "name": "number_of_dag_runs",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "30bf915db8e908cbc19599c688c4a00098abfb1204c197619937e713b8b5685d"
+}

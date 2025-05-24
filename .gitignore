@@ -26,5 +26,6 @@ gitignore/
 # Node
 node_modules/
 
-# Build generate code
+# Code and CSS from build.rs process
+assets/css/
 assets/scripts/

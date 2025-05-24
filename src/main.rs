@@ -1,8 +1,7 @@
 mod api;
-mod component;
 mod core;
 mod db;
-mod page;
+mod ui;
 
 use api::Api;
 use color_eyre::eyre;
@@ -56,8 +55,7 @@ async fn main() -> Result<(), eyre::Error> {
         .at("/spec", spec)
         .nest("/swagger", swagger)
         // User UI
-        .nest("/", page::route())
-        .nest("/component", component::route())
+        .nest("/", ui::route())
         // Global context to be shared
         .data(config)
         .data(pool)

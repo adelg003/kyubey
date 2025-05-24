@@ -19,8 +19,6 @@ pub struct System {
     pub client_id: String,
     pub system_name: String,
     pub system_id: String,
-    pub team_name: String,
-    pub team_id: String,
     pub latest_run: DateTime<Utc>,
     pub number_of_dag_runs: u64,
 }
