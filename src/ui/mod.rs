@@ -1,6 +1,8 @@
 mod component;
+mod layout;
 mod page;
 mod snippet;
+mod util;
 
 use component::{log_get, search_systems_get};
 use page::{dag_runs, index, logs, tasks};

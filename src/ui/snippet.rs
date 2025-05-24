@@ -1,5 +1,9 @@
-use crate::core::{DagRun, DagState, System, Task, TaskState};
-/// Markup for the page head. Should be the same on all pages
+use crate::{
+    core::{DagRun, System, Task},
+    ui::{
+        util::{dag_state_badge_type, task_state_badge_type},
+    },
+};
 use maud::{Markup, html};
 
 /// HTML Page Head
@@ -17,6 +21,38 @@ pub fn head() -> Markup {
     }
 }
 
+/// NavBar
+fn navbar(system_id: &Option<String>, run_id: &Option<String>, task_id: &Option<String>) -> Markup {
+    html! {
+        nav class="breadcrumbs ml-8" {
+            ul {
+              li { a href="/" { "Search" } }
+                @if let Some(system_id) = system_id {
+                    li { a href={ "/dag_runs/" (system_id) } { "DagRuns" } }
+                    @if let Some(run_id) = run_id {
+                        li { a href={ "/tasks/" (run_id) } { "Tasks" } }
+                        @if let Some(task_id) = task_id {
+                            li { a href={ "/logs/" (run_id) "/" (task_id) } { "Logs" } }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Page Title
+fn page_title(title: &str) -> Markup {
+    html! {
+        h1 class="text-6xl ml-8 pb-2 bg-gradient-to-r from-orange-700 to-amber-200 bg-clip-text text-transparent" {
+            "Kyubey: "
+            span class="animate-fade bg-gradient-to-r from-amber-600 to-amber-400 bg-clip-text text-transparent" {
+                (title)
+            }
+        }
+    }
+}
+
 /// Header at the top of every page
 pub fn header(
     title: &str,
@@ -26,28 +62,8 @@ pub fn header(
 ) -> Markup {
     html! {
         header {
-            // NavBar
-            nav class="breadcrumbs ml-8" {
-                ul {
-                  li { a href="/" { "Search" } }
-                    @if let Some(system_id) = system_id {
-                        li { a href={ "/dag_runs/" (system_id) } { "DagRuns" } }
-                        @if let Some(run_id) = run_id {
-                            li { a href={ "/tasks/" (run_id) } { "Tasks" } }
-                            @if let Some(task_id) = task_id {
-                                li { a href={ "/logs/" (run_id) "/" (task_id) } { "Logs" } }
-                            }
-                        }
-                    }
-                }
-            }
-            // Header
-            h1 class="text-6xl ml-8 pb-2 bg-gradient-to-r from-orange-700 to-amber-200 bg-clip-text text-transparent" {
-                "Kyubey: "
-                span class="animate-fade bg-gradient-to-r from-amber-600 to-amber-400 bg-clip-text text-transparent" {
-                    (title)
-                }
-            }
+            (navbar(system_id, run_id, task_id))
+            (page_title(title))
         }
     }
 }
@@ -145,33 +161,5 @@ pub fn task_stats(task: &Task) -> Markup {
                 div class="stat-desc" {}
             }
         }
-    }
-}
-
-/// Translate a DagState to a Badge Type
-pub fn dag_state_badge_type(state: &DagState) -> &'static str {
-    match state {
-        DagState::Failed => "badge-error",
-        DagState::Queued => "badge-neutral",
-        DagState::Running => "badge-primary",
-        DagState::Success => "badge-success",
-    }
-}
-
-/// Translate a DagState to a Badge Type
-pub fn task_state_badge_type(state: &TaskState) -> &'static str {
-    match state {
-        TaskState::Deferred => "badge-info",
-        TaskState::Failed => "badge-error",
-        TaskState::Queued => "badge-neutral",
-        TaskState::Removed => "badge-neutral",
-        TaskState::Restarting => "badge-secondary",
-        TaskState::Running => "badge-primary",
-        TaskState::Scheduled => "badge-neutral",
-        TaskState::Skipped => "badge-neutral",
-        TaskState::Success => "badge-success",
-        TaskState::UpForReschedule => "badge-warning",
-        TaskState::UpForRetry => "badge-warning",
-        TaskState::UpstreamFailed => "badge-warning",
     }
 }

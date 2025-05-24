@@ -19,13 +19,6 @@ fn main() {
     // Create Assets directory
     fs::create_dir_all("assets/scripts").unwrap();
 
-    // Populate Assets directory with HTMX
-    fs::copy(
-        "node_modules/htmx.org/dist/htmx.js",
-        "assets/scripts/htmx.js",
-    )
-    .unwrap();
-
     // Generate TailwindCSS file
     let output = Command::new("sh")
         .arg("-c")
@@ -40,4 +33,11 @@ fn main() {
             String::from_utf8_lossy(&output.stderr)
         );
     }
+
+    // Populate Assets directory with HTMX
+    fs::copy(
+        "node_modules/htmx.org/dist/htmx.js",
+        "assets/scripts/htmx.js",
+    )
+    .unwrap();
 }
