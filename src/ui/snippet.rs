@@ -1,8 +1,6 @@
 use crate::{
     core::{DagRun, System, Task},
-    ui::{
-        util::{dag_state_badge_type, task_state_badge_type},
-    },
+    ui::util::{dag_state_badge_type, task_state_badge_type},
 };
 use maud::{Markup, html};
 
